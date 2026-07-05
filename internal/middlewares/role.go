@@ -1,5 +1,5 @@
-// role.go ≈ role.middleware.ts: guards app-level roles (e.g. 'admin').
-// Per-cocina permissions (owner/editor/viewer) live in the services.
+// role.go: guarda de roles a nivel aplicación (p. ej. 'admin').
+// Los permisos por cocina (owner/editor/viewer) viven en los services.
 package middlewares
 
 import (
@@ -11,7 +11,7 @@ import (
 	"idilica-backend-go/internal/utils"
 )
 
-// RequireRole ≈ requireRole(...roles). Must run AFTER CheckAuth.
+// RequireRole exige alguno de los roles dados. Debe correr DESPUÉS de CheckAuth.
 func RequireRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims, ok := utils.CurrentUser(c)

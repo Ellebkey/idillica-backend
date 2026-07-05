@@ -1,5 +1,5 @@
-// Package models mirrors src/models (Sequelize) using GORM.
-// user.go ≈ user.model.ts — same table ("user") and column names.
+// Package models define las entidades GORM del dominio.
+// user.go — cuenta de usuario (tabla "user").
 package models
 
 import (
@@ -9,9 +9,8 @@ import (
 	"time"
 )
 
-// Roles is stored as a JSON column, like DataTypes.JSON in Sequelize.
-// Implementing driver.Valuer and sql.Scanner is the Go way to map a custom
-// type to a database column (no ORM magic — explicit and testable).
+// Roles se guarda como columna JSON. Implementar driver.Valuer y sql.Scanner
+// es la forma estándar de mapear un tipo propio a una columna.
 type Roles []string
 
 // Value serializes the slice to JSON when writing to the DB.
@@ -45,7 +44,7 @@ func (r *Roles) Scan(value any) error {
 	return json.Unmarshal(bytes, r)
 }
 
-// User ≈ UserInstance. Users join one or more cocinas through CocinaMember.
+// User — los usuarios pertenecen a una o más cocinas vía CocinaMember.
 type User struct {
 	ID             string    `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	Username       string    `gorm:"uniqueIndex;not null"`
@@ -57,9 +56,9 @@ type User struct {
 	CreatedAt      time.Time `gorm:"column:created_at"`
 	UpdatedAt      time.Time `gorm:"column:updated_at"`
 
-	// Associations (≈ UserInstance.associate)
+	// Asociaciones
 	Memberships []CocinaMember `gorm:"foreignKey:UserID"`
 }
 
-// TableName keeps the exact table name of the Node backend.
+// TableName fija el nombre de tabla en singular.
 func (User) TableName() string { return "user" }

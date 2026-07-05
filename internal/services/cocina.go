@@ -1,4 +1,4 @@
-// cocina.go ≈ cocina.service.ts — the multi-tenant vertical slice.
+// cocina.go — workspace multi-tenant y membresías.
 package services
 
 import (
@@ -25,7 +25,7 @@ func NewCocinaService(db *gorm.DB, logger *slog.Logger) *CocinaService {
 	return &CocinaService{db: db, logger: logger}
 }
 
-// Create ≈ create(): cocina + owner membership, atomically.
+// Create crea la cocina + la membresía owner, atómico.
 func (s *CocinaService) Create(ctx context.Context, userID string, d *dto.CreateCocinaDto) (*dto.CocinaDto, error) {
 	cocina := models.Cocina{
 		Name:             d.Name,
@@ -58,7 +58,7 @@ func (s *CocinaService) Create(ctx context.Context, userID string, d *dto.Create
 	return toCocinaDto(&cocina, models.RolOwner), nil
 }
 
-// FindAllForUser ≈ findAllForUser(): the user's cocinas with their role.
+// FindAllForUser lista las cocinas del usuario con su rol en cada una.
 func (s *CocinaService) FindAllForUser(ctx context.Context, userID string) ([]dto.CocinaDto, error) {
 	var memberships []models.CocinaMember
 	err := s.db.WithContext(ctx).
@@ -76,12 +76,12 @@ func (s *CocinaService) FindAllForUser(ctx context.Context, userID string) ([]dt
 		}
 	}
 
-	// Order by name (≈ the `order` of the include in Node)
+	// Ordenadas por nombre
 	sort.Slice(cocinas, func(i, j int) bool { return cocinas[i].Name < cocinas[j].Name })
 	return cocinas, nil
 }
 
-// FindByID ≈ findById(): membership is the tenancy guard.
+// FindByID — la membresía es la guarda de tenencia.
 func (s *CocinaService) FindByID(ctx context.Context, userID, cocinaID string) (*dto.CocinaDto, error) {
 	member, err := s.RequireMembership(ctx, userID, cocinaID)
 	if err != nil {
@@ -90,7 +90,7 @@ func (s *CocinaService) FindByID(ctx context.Context, userID, cocinaID string) (
 	return toCocinaDto(member.Cocina, member.Rol), nil
 }
 
-// Update ≈ update(): viewers cannot edit; partial update from non-nil fields.
+// Update: los viewers no editan; update parcial con los campos no nulos.
 func (s *CocinaService) Update(ctx context.Context, userID, cocinaID string, d *dto.UpdateCocinaDto) (*dto.CocinaDto, error) {
 	member, err := s.RequireMembership(ctx, userID, cocinaID)
 	if err != nil {
@@ -130,7 +130,7 @@ func (s *CocinaService) Update(ctx context.Context, userID, cocinaID string, d *
 		updates["compras_ingredientes_mes"] = *d.ComprasIngredientesMes
 	}
 	if len(updates) == 0 {
-		// ≈ the Joi .min(1) of updateCocina
+		// se requiere al menos un campo
 		return nil, apperrors.NewValidation("Validation failed", []map[string]string{
 			{"field": "body", "message": "at least one field is required"},
 		})
@@ -150,8 +150,8 @@ func (s *CocinaService) Update(ctx context.Context, userID, cocinaID string, d *
 	return toCocinaDto(&cocina, member.Rol), nil
 }
 
-// requireMembership ≈ requireMembership(): loads the caller's membership with
-// its cocina or throws NOT_FOUND — every cocina-scoped access goes through it.
+// RequireMembership carga la membresía del usuario (con su cocina) o regresa
+// NOT_FOUND — todo acceso a datos de una cocina pasa por aquí.
 func (s *CocinaService) RequireMembership(ctx context.Context, userID, cocinaID string) (*models.CocinaMember, error) {
 	var member models.CocinaMember
 	err := s.db.WithContext(ctx).
@@ -181,7 +181,7 @@ func toCocinaDto(cocina *models.Cocina, rol string) *dto.CocinaDto {
 		ComprasIngredientesMes: cocina.ComprasIngredientesMes,
 
 		Rol: rol,
-		// UTC like the Node backend (Sequelize returns "Z" timestamps)
+		// timestamps en UTC con sufijo Z
 		CreatedAt:        cocina.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt:        cocina.UpdatedAt.UTC().Format(time.RFC3339),
 	}

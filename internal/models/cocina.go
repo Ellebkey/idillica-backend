@@ -1,4 +1,4 @@
-// cocina.go ≈ cocina.model.ts — the multi-tenant workspace.
+// cocina.go — el workspace multi-tenant.
 // impuestoDefault / foodCostObjetivo are fractions (0.16 = 16%).
 package models
 

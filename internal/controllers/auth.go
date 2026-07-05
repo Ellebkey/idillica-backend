@@ -1,5 +1,5 @@
-// Package controllers mirrors src/controllers: thin handlers that bind the
-// DTO, call the service and write the response. c.Error(err) ≈ next(error).
+// Package controllers: handlers delgados — bindean el DTO, llaman al service
+// y escriben la respuesta; los errores viajan con c.Error(err).
 package controllers
 
 import (
@@ -57,7 +57,7 @@ func (ac *AuthController) ChangePassword(c *gin.Context) {
 		return
 	}
 	claims, _ := utils.CurrentUser(c)
-	// username IS the email in this app (same quirk as the Node backend)
+	// en esta app el username ES el correo
 	if err := ac.authService.ChangePassword(c.Request.Context(), claims.Username, d); err != nil {
 		_ = c.Error(err)
 		return

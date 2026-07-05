@@ -1,5 +1,5 @@
-// user_context.go ≈ user-context.util.ts. The auth middleware stores the JWT
-// claims in the gin.Context (≈ req.user); these helpers read them back.
+// user_context.go: el middleware de auth guarda los claims del JWT en el
+// gin.Context; estos helpers los leen de vuelta.
 package utils
 
 import (
@@ -9,7 +9,7 @@ import (
 	"idilica-backend-go/internal/dto"
 )
 
-// UserContextKey is where the auth middleware stores the claims (≈ req.user).
+// UserContextKey es la llave donde el middleware de auth guarda los claims.
 const UserContextKey = "user"
 
 // CurrentUser returns the authenticated user's claims, if any.
@@ -22,7 +22,7 @@ func CurrentUser(c *gin.Context) (*dto.JWTClaims, bool) {
 	return claims, ok
 }
 
-// RequireUserID ≈ requireUserId(): 403 when there is no authenticated user.
+// RequireUserID: 403 cuando no hay usuario autenticado.
 func RequireUserID(c *gin.Context) (string, error) {
 	claims, ok := CurrentUser(c)
 	if !ok || claims.ID == "" {

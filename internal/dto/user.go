@@ -1,10 +1,9 @@
-// user.go ≈ user.dto.ts — auth/user DTOs and JWT payloads.
-// json tags keep the exact field names of the Node API (camelCase).
+// user.go — DTOs de auth/usuario y payloads JWT (json en camelCase).
 package dto
 
 import "github.com/golang-jwt/jwt/v5"
 
-// ===== AUTH DTOs (binding ≈ auth.validation.ts) =====
+// ===== AUTH DTOs =====
 
 type LoginDto struct {
 	Username   string `json:"username" binding:"required"`
@@ -48,16 +47,15 @@ type LogoutDto struct {
 
 // ===== JWT DTOs =====
 
-// JWTPayload ≈ the payload signed by the Node backend ({id, username, roles}).
-// Same JWT_SECRET ⇒ tokens are interchangeable between both backends.
+// JWTPayload — lo que se firma dentro del access token.
 type JWTPayload struct {
 	ID       string   `json:"id"`
 	Username string   `json:"username"`
 	Roles    []string `json:"roles"`
 }
 
-// JWTClaims is the payload plus the registered claims (exp). golang-jwt
-// validates `exp` automatically on parse, like jsonwebtoken.verify.
+// JWTClaims — el payload más los registered claims (exp); golang-jwt valida
+// la expiración automáticamente al parsear.
 type JWTClaims struct {
 	ID       string   `json:"id"`
 	Username string   `json:"username"`
@@ -65,12 +63,12 @@ type JWTClaims struct {
 	jwt.RegisteredClaims
 }
 
-// JWTResponse ≈ JWTResponse of user.dto.ts — the login/refresh body.
+// JWTResponse — cuerpo de respuesta de login/refresh.
 type JWTResponse struct {
 	Token        string   `json:"token"`
 	RefreshToken string   `json:"refreshToken"`
 	Roles        []string `json:"roles"`
 	Username     string   `json:"username"`
 	Fullname     *string  `json:"fullname,omitempty"`
-	ExpiresIn    string   `json:"expiresIn"` // ISO timestamp, like formatISO(addMinutes(now, 15))
+	ExpiresIn    string   `json:"expiresIn"` // timestamp ISO de expiración del access token
 }

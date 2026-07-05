@@ -1,5 +1,5 @@
-// Package config mirrors src/config of idilica-backend (Node).
-// config.go ≈ config.ts: loads .env, validates required vars, exposes a typed config.
+// Package config carga y valida la configuración del servicio.
+// config.go: lee .env, valida las variables requeridas y expone una config tipada.
 package config
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config is the Go equivalent of the `envConfig` object in config.ts.
+// Config es la configuración tipada de todo el servicio.
 type Config struct {
 	Env                      string // APP_ENV: development | production | stage | test
 	Port                     int
@@ -30,10 +30,10 @@ type Config struct {
 	MinPool                  int
 }
 
-// Load reads .env (optional, like dotenv) and validates the environment,
-// mirroring the Joi schema in config.ts: missing required vars fail fast.
+// Load lee .env (opcional) y valida el entorno: si falta una variable
+// requerida, el arranque falla de inmediato con la lista completa.
 func Load() (*Config, error) {
-	// .env in the working directory; silently ignored if absent (same as dotenv)
+	// .env del working directory; se ignora en silencio si no existe
 	_ = godotenv.Load()
 
 	cfg := &Config{
@@ -59,7 +59,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("config validation error: APP_ENV must be one of development|production|stage|test, got %q", cfg.Env)
 	}
 
-	// Same required set as the Joi schema
+	// Variables obligatorias
 	missing := []string{}
 	required := map[string]string{
 		"JWT_SECRET":   cfg.JWTSecret,
@@ -80,7 +80,7 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// IsProduction mirrors the `isProduction` check in sequelize.ts (production or stage).
+// IsProduction agrupa production y stage.
 func (c *Config) IsProduction() bool {
 	return c.Env == "production" || c.Env == "stage"
 }

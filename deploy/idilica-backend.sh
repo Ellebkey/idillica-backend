@@ -14,7 +14,6 @@ DEPLOY_START=$(date +%s)
 log() { echo "==> [$(date '+%H:%M:%S')] $1"; }
 
 log "Deploy started"
-# Sin runtime que preparar: el binario Go es estático (esto era nvm/npm en maguey)
 
 cd /home/ellebkey/apps/idilica
 log "Artifact: $(du -h backend.tar.gz | cut -f1) backend.tar.gz"

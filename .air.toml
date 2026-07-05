@@ -1,4 +1,4 @@
-# air ≈ tsx watch: hot reload en desarrollo.
+# Hot reload en desarrollo.
 # Instalar con: go install github.com/air-verse/air@latest
 root = "."
 tmp_dir = "tmp"

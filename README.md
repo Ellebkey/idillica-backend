@@ -1,136 +1,97 @@
-# Idílica — Backend Go (espejo de idilica-backend)
+# Idílica — API de costeo de recetas
 
-Réplica 1:1 del backend Node (`idilica-backend`) escrita en **Go + Gin + GORM**,
-con la misma estructura de carpetas, el mismo contrato de API y las mismas
-variables de entorno. El objetivo es doble: servir la app y ser tu campo de
-práctica de Go comparando archivo por archivo contra el Node que ya dominas.
+Backend en **Go** para Idílica (panadería gourmet): costeo de recetas en vivo
+a partir de un catálogo de ingredientes con precios reales de compra, merma y
+gastos de operación. Multi-cocina, con autenticación JWT y roles por workspace.
 
-## El mapa Node → Go
+## Qué hace
 
-| Node (Express) | Go (Gin) | Nota |
+- **Ingredientes** con N *productos de compra* (marca, presentación, precio,
+  proveedor); solo el producto **activo** alimenta los costos. Cada cambio de
+  precio guarda historial y fecha de frescura.
+- **Merma** (desperdicio) por ingrediente: de referencia, manual o **medida con
+  báscula** (mediciones guardadas). El costo unitario siempre es "por kilo, ya
+  con desperdicio": `precio / cantidad / (1 − merma%)`.
+- **Recetas** con líneas que apuntan a un ingrediente **o a otra receta**
+  (subrecetas anidadas), porciones, rendimiento, precio de venta, alérgenos,
+  pasos y fotos. El guardado valida referencias y **rechaza ciclos** en el
+  grafo de subrecetas.
+- **Gastos de operación** mensuales por cocina (sueldos, gas, luz, equipo)
+  repartidos como % sobre las compras de ingredientes.
+- Los costos **nunca se persisten**: el frontend carga el catálogo completo en
+  un solo `GET` y los deriva en vivo.
+
+## Stack
+
+Go 1.26 · [Gin](https://gin-gonic.com) · [GORM](https://gorm.io) + PostgreSQL ·
+Redis (refresh tokens) · `log/slog`.
+
+```
+cmd/api          arranque + graceful shutdown
+cmd/seed         dataset de demostración
+internal/
+  config/        env, logger, PostgreSQL (AutoMigrate), Redis
+  apperrors/     AppError + middleware de errores (JSON estándar)
+  middlewares/   auth JWT, roles, rate limit por IP, headers, request log
+  models/        entidades GORM
+  dto/           entradas/salidas del API (validación por tags binding)
+  services/      lógica de negocio + motor de costos
+  controllers/   handlers delgados
+  routes/        wiring explícito y registro de endpoints
+```
+
+## API
+
+| Método | Ruta | Descripción |
 | --- | --- | --- |
-| `src/index.ts` | `cmd/api/main.go` | + graceful shutdown explícito |
-| `src/config/config.ts` (Joi env) | `internal/config/config.go` | mismos nombres de env vars |
-| `src/config/express.ts` | `internal/routes/router.go` | middlewares + wiring |
-| `src/config/sequelize.ts` | `internal/config/database.go` | `AutoMigrate` ≈ `sequelize.sync()` |
-| winston | `log/slog` (stdlib) | texto en dev, JSON en prod |
-| `src/errors/*` | `internal/apperrors/*` | mismo JSON `{error:{code,message,status}}` |
-| `next(error)` | `c.Error(err)` + `ErrorHandler` | patrón idéntico |
-| Joi schemas (`src/validations`) | tags `binding` en los DTOs | validator de Gin |
-| `validateDto<LoginDto>(...)` | `utils.BindJSON[dto.LoginDto](c)` | generics de Go |
-| Sequelize models | GORM models (`internal/models`) | mismas tablas/columnas |
-| `withTransaction` (AsyncLocalStorage) | `db.Transaction(func(tx))` | explícito > implícito |
-| express-rate-limit | `x/time/rate` por IP (a mano) | lección de concurrencia |
-| singletons por `import` | inyección explícita en `router.go` | el grafo de deps se lee completo |
-| `tsx watch` | `air` (`make dev`) | hot reload |
-| jest | `go test ./...` | stdlib `testing` |
-| eslint | `go vet` / golangci-lint | `make lint` |
+| POST | `/api/auth/register` | Crea usuario + su cocina (owner) |
+| POST | `/api/auth/login` · `/refresh` · `/logout` | Sesión (JWT + refresh token rotado) |
+| GET | `/api/cocinas` · `/api/cocinas/:id` | Cocinas del usuario |
+| PUT | `/api/cocinas/:id` | Ajustes (moneda, IVA, objetivo, gastos de operación) |
+| GET | `/api/cocinas/:id/catalogo` | **Catálogo completo en un solo GET** |
+| POST | `/api/cocinas/:id/ingredientes` | Alta de ingrediente + primer producto |
+| PUT/DELETE | `/api/ingredientes/:id` | Editar / eliminar (bloquea si está en uso) |
+| POST | `/api/ingredientes/:id/productos` | Agregar producto de compra |
+| PUT | `/api/ingredientes/:id/producto-activo/:productoId` | Cambiar el producto EN USO |
+| PUT | `/api/ingredientes/:id/merma` | Merma manual/referencia |
+| POST | `/api/ingredientes/:id/mediciones` | Medición con báscula (origen "medido") |
+| PUT | `/api/productos/:id/precio` | Nuevo precio (+ historial + frescura) |
+| POST | `/api/cocinas/:id/recetas` · PUT/DELETE `/api/recetas/:id` | Recetas (replace completo de líneas, detección de ciclos) |
 
-## Paridad real con el backend Node
+Auth: token JWT crudo en el header `Authorization`. Errores siempre como
+`{ "error": { "code", "message", "status", "details"? } }`.
 
-- **Mismo contrato de API**: rutas, formas JSON (camelCase), códigos y formato
-  de error idénticos. La app React funciona contra cualquiera de los dos.
-- **Mismo `JWT_SECRET` ⇒ tokens intercambiables**, y mismas llaves de Redis
-  (`refresh_token:*`) ⇒ las sesiones sobreviven al cambiar de backend.
-- **Misma forma de base de datos** (tablas `user`, `cocina`, `cocina_member`,
-  UUIDs, snake_case), pero en una base PROPIA (`idilica_go`) para que ambos
-  corran a la vez sin pisarse.
-- Puertos: Node `4050`, **Go `4051`**.
+## Desarrollo
 
-## Puesta en marcha
+Requisitos: Go ≥ 1.26, Docker (o PostgreSQL 16 + Redis 7 propios).
 
 ```bash
 cp .env.example .env      # ajusta SQL_PASSWORD y JWT_SECRET
-make docker-up            # postgres + redis propios (crea la BD idilica_go sola)
-make dev                  # air si está instalado; si no: go run ./cmd/api
-go run ./cmd/seed -email <usuario>   # opcional: dataset demo del diseño
+make docker-up            # postgres + redis
+make dev                  # http://localhost:4051/api (hot reload con air)
+go run ./cmd/seed -email <usuario>   # opcional: datos de demostración
 ```
 
-`GET http://localhost:4051/api/health-check` → `OK`.
-
-Si ya tienes OTRO Postgres/Redis ocupando los puertos (p. ej. el stack de
-maguey), puedes reutilizarlo (crea la BD con `createdb idilica_go`) o levantar
-este compose en puertos alternos: `SQL_PORT=5433 REDIS_PORT=6380 make docker-up`
-(y ajusta el `.env` igual). También puedes correr todo contenedorizado:
-`docker compose --profile app up -d --build`.
-
-Para probar la app React contra este backend, cambia el target del proxy en
-`idilica-app/vite.config.ts` de `:4050` a `:4051`.
-
-## Producción (droplet)
-
-Go compila a **un binario estático**: no hay `node_modules`, ni runtime, ni
-`npm install` en el servidor. El deploy es compilar, copiar un archivo y
-reiniciar el servicio:
+`GET /api/health-check` → `OK`. El esquema se crea solo al arrancar
+(AutoMigrate). Pruebas y análisis estático:
 
 ```bash
-make build-linux                                  # bin/api-linux (Linux x86_64)
-scp bin/api-linux ellebkey@droplet:/home/ellebkey/apps/idilica/api
-scp .env.prod ellebkey@droplet:/home/ellebkey/apps/idilica/.env
-sudo systemctl restart idilica-api
+make test   # incluye las pruebas del motor de costos
+make vet
 ```
 
-### ¿Y el pm2 de Go?
+## Producción
 
-No necesitas uno: **systemd** (ya incluido en Linux) hace todo lo que pm2 hace
-por Node — reiniciar si truena, arrancar en cada boot, logs centralizados. La
-unidad lista está en `deploy/idilica-api.service` (instrucciones adentro).
-
-| pm2 (Node) | systemd (Go) |
-| --- | --- |
-| `pm2 start` | `sudo systemctl enable --now idilica-api` |
-| `pm2 status` | `systemctl status idilica-api` |
-| `pm2 restart` | `sudo systemctl restart idilica-api` |
-| `pm2 logs` | `journalctl -u idilica-api -f` |
-| `pm2 startup` (boot) | ya incluido en `enable` |
-| modo cluster (multi-core) | innecesario: las goroutines usan todos los cores en un solo proceso |
-
-Si tu droplet ya corre pm2 para maguey y prefieres un solo panel, pm2 también
-supervisa binarios: `pm2 start ./api --name idilica-api`. Funciona igual; solo
-es una dependencia extra (Node) que el binario Go no necesita.
-
-## Comandos
-
-| npm (Node) | make (Go) |
-| --- | --- |
-| `npm run dev` | `make dev` |
-| `npm run build` | `make build` (binario en `bin/api`) |
-| `npm test` | `make test` |
-| `npm run lint` | `make lint` |
-| — | `make vet`, `make tidy` |
-
-Herramientas opcionales:
+Compila a un binario estático — sin runtime que instalar en el servidor:
 
 ```bash
-go install github.com/air-verse/air@latest          # hot reload
-brew install golangci-lint                           # linter completo
+make build-linux          # bin/api-linux + bin/seed-linux (Linux x86_64)
 ```
 
-## Estructura
+El pipeline (`.github/workflows/main.yml`) construye, sube el tarball al
+servidor y ejecuta el script de release; systemd supervisa el proceso. Piezas
+en `deploy/`: `idilica-backend.sh` (swap de release + health check),
+`idilica-api.service` (unidad systemd) y `nginx-api-idilica.conf`. Variables de
+entorno de producción: ver `.env.prod.example`.
 
-```
-cmd/api/main.go        arranque + graceful shutdown
-internal/
-  config/              env, slog, GORM (Postgres), Redis
-  apperrors/           AppError + middleware de errores (mismo JSON que Node)
-  middlewares/         auth JWT, roles, rate limit, headers, request logger
-  models/              User, Cocina, CocinaMember (GORM)
-  dto/                 structs de entrada/salida con tags binding+json
-  services/            jwt, email (Resend), auth, cocina
-  controllers/         handlers delgados (bind → service → JSON)
-  routes/              wiring explícito + registro de rutas
-  utils/               BindJSON genérico, contexto de usuario
-```
-
-## Apuntes de Go para venir de Node
-
-- **Los errores son valores**: no hay `try/catch`; cada llamada devuelve
-  `(resultado, error)` y decides. `errors.Is/As` ≈ `instanceof`.
-- **`ctx context.Context` viaja primero** en cada función de servicio: es la
-  cancelación/deadline del request (Node lo hace implícito).
-- **Punteros = opcionalidad**: `*string` en un DTO distingue "no vino" de
-  "vino vacío" (lo que en Joi era `.optional()`).
-- **Interfaces implícitas**: `Roles` implementa `driver.Valuer`/`sql.Scanner`
-  solo por tener los métodos — así se mapea un tipo custom a una columna JSON.
-- La migración a producción se hace con binario compilado (`make build`):
-  no hay `node_modules` ni runtime que instalar en el servidor.
+CI en cada PR: `go vet` + pruebas + build (`.github/workflows/ci.yml`).

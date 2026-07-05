@@ -1,6 +1,4 @@
-// auth.go ≈ auth.service.ts. Note how db.Transaction(func(tx)) replaces the
-// AsyncLocalStorage trick of transaction.util.ts: in Go the transaction is
-// passed explicitly — explicit beats implicit.
+// auth.go: registro, login y ciclo de vida de contraseñas y sesiones.
 package services
 
 import (
@@ -25,7 +23,7 @@ import (
 const (
 	resetTokenTtl  = time.Hour
 	verifyTokenTtl = 24 * time.Hour
-	saltRounds     = 10 // bcrypt cost, same as the Node backend
+	saltRounds     = 10 // costo bcrypt
 )
 
 type AuthService struct {
@@ -48,7 +46,7 @@ func NewAuthService(
 	return &AuthService{db: db, redis: redisClient, cfg: cfg, jwt: jwtService, email: emailService, logger: logger}
 }
 
-// Login ≈ login().
+// Login valida credenciales y emite tokens.
 func (s *AuthService) Login(ctx context.Context, d *dto.LoginDto) (*dto.JWTResponse, error) {
 	invalidCredentials := apperrors.NewBusinessRule("Invalid username or password")
 
@@ -87,7 +85,7 @@ func (s *AuthService) Login(ctx context.Context, d *dto.LoginDto) (*dto.JWTRespo
 	return response, nil
 }
 
-// Refresh ≈ refresh(): validates + rotates the refresh token.
+// Refresh valida y rota el refresh token.
 func (s *AuthService) Refresh(ctx context.Context, d *dto.RefreshTokenDto) (*dto.JWTResponse, error) {
 	tokenData, err := s.jwt.ValidateRefreshToken(ctx, d.RefreshToken)
 	if err != nil {
@@ -121,7 +119,7 @@ func (s *AuthService) Refresh(ctx context.Context, d *dto.RefreshTokenDto) (*dto
 	}, nil
 }
 
-// Logout ≈ logoutWithToken().
+// Logout revoca el refresh token.
 func (s *AuthService) Logout(ctx context.Context, d *dto.LogoutDto) error {
 	userID, err := s.jwt.RevokeRefreshToken(ctx, d.RefreshToken)
 	if err != nil {
@@ -133,8 +131,8 @@ func (s *AuthService) Logout(ctx context.Context, d *dto.LogoutDto) error {
 	return nil
 }
 
-// Register ≈ register(): creates the user AND their personal cocina (owner)
-// in one transaction. With verification disabled the account is ready to use.
+// Register crea el usuario Y su cocina personal (como owner) en una sola
+// transacción. Con la verificación apagada, la cuenta queda lista para entrar.
 func (s *AuthService) Register(ctx context.Context, d *dto.RegisterDto) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		hashedPassword, err := HashPassword(d.Password)
@@ -203,8 +201,8 @@ func (s *AuthService) Register(ctx context.Context, d *dto.RegisterDto) error {
 	})
 }
 
-// ChangePassword ≈ changePassword(). The email comes from the JWT username
-// (in this app username IS the email — same quirk as the Node backend).
+// ChangePassword — el email sale del username del JWT (en esta app el
+// username ES el correo).
 func (s *AuthService) ChangePassword(ctx context.Context, email string, d *dto.ChangePasswordDto) error {
 	var userID string
 
@@ -245,8 +243,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, email string, d *dto.C
 	return nil
 }
 
-// ResetPassword ≈ resetPassword(): silent when the email does not exist
-// (prevents email enumeration).
+// ResetPassword: silencioso si el correo no existe (evita enumeración).
 func (s *AuthService) ResetPassword(ctx context.Context, email string) error {
 	var user models.User
 	err := s.db.WithContext(ctx).First(&user, "email = ?", email).Error
@@ -273,7 +270,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, email string) error {
 	return nil
 }
 
-// ConfirmResetPassword ≈ confirmResetPassword().
+// ConfirmResetPassword aplica la nueva contraseña con el token de un solo uso.
 func (s *AuthService) ConfirmResetPassword(ctx context.Context, d *dto.ConfirmResetPasswordDto) error {
 	redisKey := "password_reset:" + d.Token
 	userID, err := s.redis.Get(ctx, redisKey).Result()
@@ -309,7 +306,7 @@ func (s *AuthService) ConfirmResetPassword(ctx context.Context, d *dto.ConfirmRe
 	return nil
 }
 
-// VerifyEmail ≈ verifyEmail().
+// VerifyEmail marca el correo como verificado.
 func (s *AuthService) VerifyEmail(ctx context.Context, d *dto.VerifyEmailDto) error {
 	redisKey := "email_verify:" + d.Token
 	userID, err := s.redis.Get(ctx, redisKey).Result()
@@ -339,12 +336,12 @@ func (s *AuthService) VerifyEmail(ctx context.Context, d *dto.VerifyEmailDto) er
 	return nil
 }
 
-// ResendVerificationEmail ≈ resendVerificationEmail().
+// ResendVerificationEmail reenvía el token de verificación.
 func (s *AuthService) ResendVerificationEmail(ctx context.Context, email string) error {
 	var user models.User
 	err := s.db.WithContext(ctx).First(&user, "email = ?", email).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil // silent, same anti-enumeration behavior
+		return nil // silencioso: evita enumeración de correos
 	}
 	if err != nil {
 		return err
@@ -369,8 +366,7 @@ func (s *AuthService) ResendVerificationEmail(ctx context.Context, email string)
 	return nil
 }
 
-// HashPassword ≈ hashPassword() — exported plain function so it is trivially
-// testable without wiring the whole service.
+// HashPassword — función suelta para poder probarla sin armar el service.
 func HashPassword(password string) (string, error) {
 	hashed, err := bcrypt.GenerateFromPassword([]byte(password), saltRounds)
 	if err != nil {
@@ -379,7 +375,7 @@ func HashPassword(password string) (string, error) {
 	return string(hashed), nil
 }
 
-// randomToken ≈ crypto.randomBytes(32).toString('hex').
+// randomToken genera 32 bytes aleatorios codificados en hex.
 func randomToken() (string, error) {
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {

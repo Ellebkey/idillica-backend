@@ -1,12 +1,11 @@
-// Package apperrors mirrors src/errors of the Node backend.
-// errors.go ≈ app-error.ts: one AppError type + constructors per case,
-// producing the same codes and HTTP status codes.
+// Package apperrors define el error de aplicación y sus constructores:
+// un solo tipo AppError con código propio y status HTTP por caso.
 package apperrors
 
 import "fmt"
 
-// AppError ≈ class AppError. It implements the `error` interface and travels
-// through handlers via c.Error(err) — the Go twin of Express's next(error).
+// AppError implementa la interfaz `error` y viaja por los handlers vía
+// c.Error(err); el middleware de errores lo convierte en la respuesta JSON.
 type AppError struct {
 	Code       string
 	Message    string

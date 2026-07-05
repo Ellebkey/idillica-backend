@@ -1,4 +1,4 @@
-// cocina.go ≈ cocina.route.ts.
+// cocina.go — rutas de cocinas.
 package routes
 
 import (

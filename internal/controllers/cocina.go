@@ -1,4 +1,4 @@
-// cocina.go ≈ cocina.controller.ts.
+// cocina.go — handlers de cocinas.
 package controllers
 
 import (

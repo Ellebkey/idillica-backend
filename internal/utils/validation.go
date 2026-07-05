@@ -1,7 +1,6 @@
-// Package utils mirrors src/utils.
-// validation.go ≈ validation.util.ts: instead of a Joi schema registry, Gin
-// binds+validates against the DTO struct tags; this helper converts failures
-// into the same response shape ({field, message} details, VALIDATION_ERROR).
+// Package utils — helpers compartidos.
+// validation.go: Gin valida contra los tags del DTO al hacer bind; este helper
+// convierte los fallos en la respuesta estándar ({field, message}).
 package utils
 
 import (
@@ -33,8 +32,7 @@ func init() {
 	}
 }
 
-// BindJSON ≈ validateDto('schema', req.body). Generics give the same ergonomics
-// as validateDto<LoginDto>(...): utils.BindJSON[dto.LoginDto](c).
+// BindJSON bindea y valida el body: utils.BindJSON[dto.LoginDto](c).
 func BindJSON[T any](c *gin.Context) (*T, error) {
 	var obj T
 	if err := c.ShouldBindJSON(&obj); err != nil {
@@ -43,7 +41,7 @@ func BindJSON[T any](c *gin.Context) (*T, error) {
 	return &obj, nil
 }
 
-// BindUri ≈ validateDto('entityUuid', req.params).
+// BindUri bindea y valida los parámetros de ruta.
 func BindUri[T any](c *gin.Context) (*T, error) {
 	var obj T
 	if err := c.ShouldBindUri(&obj); err != nil {
@@ -68,7 +66,7 @@ func toValidationError(err error) error {
 	return apperrors.NewBadRequest("Invalid request payload")
 }
 
-// messageFor produces Joi-style readable messages per validation tag.
+// messageFor produce mensajes legibles por tag de validación.
 func messageFor(fe validator.FieldError) string {
 	switch fe.Tag() {
 	case "required":

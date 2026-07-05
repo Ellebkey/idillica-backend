@@ -1,5 +1,5 @@
-// logger.go ≈ the HTTP request logging block in express.ts (dev/test only):
-// logs the incoming request and, on finish, status + duration.
+// logger.go: log de requests HTTP (solo dev/test) — la entrada y, al
+// terminar, status + duración.
 package middlewares
 
 import (

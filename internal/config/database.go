@@ -1,6 +1,6 @@
-// database.go ≈ sequelize.ts: GORM plays the role of Sequelize.
-// AutoMigrate ≈ sequelize.sync(); the NamingStrategy mirrors the Node models
-// (singular snake_case table names: user, cocina, cocina_member).
+// database.go: conexión a PostgreSQL vía GORM.
+// AutoMigrate sincroniza el esquema al arrancar; la NamingStrategy usa tablas
+// en singular snake_case (user, cocina, cocina_member).
 package config
 
 import (
@@ -16,8 +16,8 @@ import (
 	"idilica-backend-go/internal/models"
 )
 
-// NewDatabase opens the PostgreSQL connection, ensures the uuid extension,
-// runs AutoMigrate and configures the pool (MAX_POOL/MIN_POOL of the Node app).
+// NewDatabase abre la conexión, asegura la extensión uuid, corre AutoMigrate
+// y configura el pool de conexiones.
 func NewDatabase(cfg *Config, logger *slog.Logger) (*gorm.DB, error) {
 	logger.Info("Initializing PostgreSQL Database")
 
@@ -31,8 +31,7 @@ func NewDatabase(cfg *Config, logger *slog.Logger) (*gorm.DB, error) {
 		cfg.SQLHost, cfg.SQLUser, cfg.SQLPassword, cfg.SQLDB, cfg.SQLPort, sslMode,
 	)
 
-	// Query logging: verbose in development (mirror of `logging: logger.verbose`),
-	// quiet elsewhere.
+	// Log de queries: verboso en desarrollo, silencioso en el resto.
 	gormLogLevel := gormlogger.Silent
 	if cfg.IsDevelopment() {
 		gormLogLevel = gormlogger.Info
@@ -41,7 +40,7 @@ func NewDatabase(cfg *Config, logger *slog.Logger) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: gormlogger.Default.LogMode(gormLogLevel),
 		NamingStrategy: schema.NamingStrategy{
-			SingularTable: true, // table "user", not "users" — same as the Node models
+			SingularTable: true, // tabla "user", no "users"
 		},
 	})
 	if err != nil {
@@ -54,7 +53,7 @@ func NewDatabase(cfg *Config, logger *slog.Logger) (*gorm.DB, error) {
 		logger.Warn("could not ensure uuid-ossp extension", "error", err)
 	}
 
-	// ≈ sequelize.sync()
+	// Sincroniza el esquema con los modelos
 	err = db.AutoMigrate(
 		&models.User{}, &models.Cocina{}, &models.CocinaMember{},
 		&models.Ingrediente{}, &models.ProductoCompra{}, &models.HistorialPrecio{},

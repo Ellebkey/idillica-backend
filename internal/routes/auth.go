@@ -1,4 +1,4 @@
-// auth.go ≈ auth.route.ts — same paths, same rate limiting.
+// auth.go — rutas de autenticación.
 package routes
 
 import (

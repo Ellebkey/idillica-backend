@@ -1,6 +1,5 @@
-// redis.go ≈ redis-config.ts. Same role: refresh tokens and one-time tokens
-// (email verify / password reset). Key scheme is identical to the Node app,
-// so sessions are interchangeable between both backends.
+// redis.go: cliente Redis para refresh tokens y tokens de un solo uso
+// (verificación de correo / reset de contraseña).
 package config
 
 import (
@@ -11,8 +10,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// NewRedis creates the client and pings it. Like the Node app, a Redis that is
-// down does not prevent boot — flows that need it will fail with clear errors.
+// NewRedis crea el cliente y hace ping. Un Redis caído no impide el arranque:
+// los flujos que lo necesitan fallarán con errores claros.
 func NewRedis(cfg *Config, logger *slog.Logger) *redis.Client {
 	opts, err := redis.ParseURL(cfg.RedisURL)
 	if err != nil {

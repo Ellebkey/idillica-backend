@@ -1,5 +1,5 @@
-// logger.go ≈ logger.ts: winston → log/slog (standard library, Go 1.21+).
-// Development: human-readable text at debug level. Production: structured JSON.
+// logger.go: logging estructurado con log/slog (librería estándar).
+// Desarrollo: texto legible a nivel debug. Producción: JSON estructurado.
 package config
 
 import (
@@ -7,8 +7,7 @@ import (
 	"os"
 )
 
-// NewLogger builds the application logger, mirroring the dev/prod split of
-// the winston setup (devFormat printf vs prodFormat json).
+// NewLogger construye el logger de la aplicación.
 func NewLogger(cfg *Config) *slog.Logger {
 	var handler slog.Handler
 
@@ -18,6 +17,6 @@ func NewLogger(cfg *Config) *slog.Logger {
 		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 	}
 
-	// `label: 'idilica-api'` of the winston config
+	// etiqueta fija de la app en cada línea de log
 	return slog.New(handler).With("app", "idilica-api")
 }

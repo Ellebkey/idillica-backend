@@ -1,19 +1,19 @@
-# Espejo de los npm scripts del backend Node.
+# Tareas del proyecto.
 .PHONY: dev run build test vet lint tidy docker-up docker-down build-linux
 
-# npm run dev  (usa air si está instalado; si no, go run sin hot reload)
+# desarrollo con hot reload (air si está instalado; si no, go run)
 dev:
 	@command -v air >/dev/null 2>&1 && air || go run ./cmd/api
 
-# node release/index.js
+# correr sin hot reload
 run:
 	go run ./cmd/api
 
-# npm run build
+# binario local
 build:
 	go build -o bin/api ./cmd/api
 
-# npm test
+# pruebas
 test:
 	go test ./...
 
@@ -21,7 +21,7 @@ test:
 vet:
 	go vet ./...
 
-# npm run lint (golangci-lint si está instalado; si no, go vet)
+# golangci-lint si está instalado; si no, go vet
 lint:
 	@command -v golangci-lint >/dev/null 2>&1 && golangci-lint run || go vet ./...
 

@@ -1,7 +1,6 @@
-// Package services mirrors src/services.
-// jwt.go ≈ jwt.service.ts: access tokens (15 min) + refresh tokens stored in
-// Redis under the SAME key scheme as the Node backend (refresh_token:<sha256>,
-// refresh_tokens_user:<id>), so sessions are interchangeable between both.
+// Package services contiene la lógica de negocio.
+// jwt.go: access tokens (15 min) + refresh tokens en Redis
+// (refresh_token:<sha256>, refresh_tokens_user:<id>).
 package services
 
 import (
@@ -27,7 +26,7 @@ const (
 	refreshTtlLong     = 30 * 24 * time.Hour // rememberMe = true
 )
 
-// RefreshTokenData is stored as JSON in Redis — same field names as Node.
+// RefreshTokenData se guarda como JSON en Redis.
 type RefreshTokenData struct {
 	UserID     string `json:"userId"`
 	RememberMe bool   `json:"rememberMe"`
@@ -44,7 +43,7 @@ func NewJWTService(secret string, redisClient *redis.Client, logger *slog.Logger
 	return &JWTService{secret: secret, redis: redisClient, logger: logger}
 }
 
-// GenerateToken ≈ generateToken: signs {id, username, roles} with HS256.
+// GenerateToken firma {id, username, roles} con HS256.
 func (s *JWTService) GenerateToken(payload dto.JWTPayload) (string, error) {
 	claims := dto.JWTClaims{
 		ID:       payload.ID,
@@ -66,7 +65,7 @@ func (s *JWTService) GenerateToken(payload dto.JWTPayload) (string, error) {
 	return token, nil
 }
 
-// GenerateTokenResponse ≈ generateTokenResponse.
+// GenerateTokenResponse arma el cuerpo completo de login/refresh.
 func (s *JWTService) GenerateTokenResponse(ctx context.Context, user dto.JWTPayload, rememberMe bool) (*dto.JWTResponse, error) {
 	token, err := s.GenerateToken(user)
 	if err != nil {
@@ -87,8 +86,8 @@ func (s *JWTService) GenerateTokenResponse(ctx context.Context, user dto.JWTPayl
 	}, nil
 }
 
-// CreateRefreshToken ≈ createRefreshToken: random token, hash stored in Redis
-// with TTL, plus a per-user set to support "revoke all".
+// CreateRefreshToken: token aleatorio cuyo hash se guarda en Redis con TTL,
+// más un set por usuario para poder "revocar todos".
 func (s *JWTService) CreateRefreshToken(ctx context.Context, userID string, rememberMe bool) (string, error) {
 	raw := make([]byte, 48)
 	if _, err := rand.Read(raw); err != nil {
@@ -124,11 +123,11 @@ func (s *JWTService) CreateRefreshToken(ctx context.Context, userID string, reme
 	return rawToken, nil
 }
 
-// ValidateRefreshToken ≈ validateRefreshToken.
+// ValidateRefreshToken verifica y devuelve los datos del refresh token.
 func (s *JWTService) ValidateRefreshToken(ctx context.Context, rawToken string) (*RefreshTokenData, error) {
 	stored, err := s.redis.Get(ctx, "refresh_token:"+hashRefreshToken(rawToken)).Result()
 	if err != nil {
-		// redis.Nil = key not found (≈ a null from redisClient.get)
+		// redis.Nil = llave inexistente
 		return nil, apperrors.NewBusinessRule("Invalid or expired refresh token")
 	}
 
@@ -139,7 +138,7 @@ func (s *JWTService) ValidateRefreshToken(ctx context.Context, rawToken string) 
 	return &data, nil
 }
 
-// RotateRefreshToken ≈ rotateRefreshToken: burn the old one, issue a new one.
+// RotateRefreshToken quema el token anterior y emite uno nuevo.
 func (s *JWTService) RotateRefreshToken(ctx context.Context, oldRawToken, userID string, rememberMe bool) (string, error) {
 	oldHash := hashRefreshToken(oldRawToken)
 	s.redis.Del(ctx, "refresh_token:"+oldHash)
@@ -147,12 +146,12 @@ func (s *JWTService) RotateRefreshToken(ctx context.Context, oldRawToken, userID
 	return s.CreateRefreshToken(ctx, userID, rememberMe)
 }
 
-// RevokeRefreshToken ≈ revokeRefreshToken. Returns the userID or "" if unknown.
+// RevokeRefreshToken revoca; devuelve el userID o "" si no existía.
 func (s *JWTService) RevokeRefreshToken(ctx context.Context, rawToken string) (string, error) {
 	tokenHash := hashRefreshToken(rawToken)
 	stored, err := s.redis.Get(ctx, "refresh_token:"+tokenHash).Result()
 	if err != nil {
-		return "", nil // unknown token: nothing to revoke (mirror: returns null)
+		return "", nil // token desconocido: nada que revocar
 	}
 
 	var data RefreshTokenData
@@ -165,7 +164,7 @@ func (s *JWTService) RevokeRefreshToken(ctx context.Context, rawToken string) (s
 	return data.UserID, nil
 }
 
-// RevokeAllUserRefreshTokens ≈ revokeAllUserRefreshTokens (pipeline = multi).
+// RevokeAllUserRefreshTokens borra todas las sesiones del usuario.
 func (s *JWTService) RevokeAllUserRefreshTokens(ctx context.Context, userID string) error {
 	setKey := "refresh_tokens_user:" + userID
 	tokenHashes, err := s.redis.SMembers(ctx, setKey).Result()
@@ -188,12 +187,12 @@ func (s *JWTService) RevokeAllUserRefreshTokens(ctx context.Context, userID stri
 	return nil
 }
 
-// ValidatePassword ≈ validatePassword (bcrypt.compare).
+// ValidatePassword compara la contraseña contra su hash bcrypt.
 func (s *JWTService) ValidatePassword(plaintext, hash string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(plaintext)) == nil
 }
 
-// ValidateToken ≈ validateToken (jwt.verify): parses and checks signature+exp.
+// ValidateToken parsea el token y verifica firma + expiración.
 func (s *JWTService) ValidateToken(tokenString string) (*dto.JWTClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &dto.JWTClaims{}, func(t *jwt.Token) (any, error) {
 		return []byte(s.secret), nil

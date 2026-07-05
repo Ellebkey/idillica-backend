@@ -1,6 +1,6 @@
-// Package middlewares mirrors src/middlewares.
-// auth.go ≈ auth.ts: validates the JWT from the Authorization header and
-// stores the claims in the context (≈ req.user = payload).
+// Package middlewares: piezas transversales de la cadena HTTP.
+// auth.go valida el JWT del header Authorization y guarda los claims en el
+// contexto del request.
 package middlewares
 
 import (
@@ -19,9 +19,8 @@ func NewAuth(jwtService *services.JWTService) *Auth {
 	return &Auth{jwtService: jwtService}
 }
 
-// CheckAuth ≈ Auth.checkAuth. The backend expects the RAW token in the
-// Authorization header — no "Bearer" prefix — exactly like the Node app
-// (the React frontend already sends it that way).
+// CheckAuth espera el token CRUDO en el header Authorization — sin prefijo
+// "Bearer" — que es como lo envía el frontend.
 func (a *Auth) CheckAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.GetHeader("Authorization")

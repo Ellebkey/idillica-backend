@@ -1,4 +1,4 @@
-// security.go ≈ helmet(): the core security headers, set explicitly.
+// security.go: headers de seguridad básicos, puestos explícitamente.
 package middlewares
 
 import "github.com/gin-gonic/gin"

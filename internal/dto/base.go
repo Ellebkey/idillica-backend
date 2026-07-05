@@ -1,9 +1,9 @@
-// Package dto mirrors src/interfaces (the *.dto.ts files). The `binding` tags
-// replace the Joi schemas of src/validations: Gin validates on bind and the
-// utils package converts failures into the same VALIDATION_ERROR response.
+// Package dto define las entradas y salidas del API. Los tags `binding`
+// validan al hacer bind; utils convierte los fallos en la respuesta
+// VALIDATION_ERROR estándar.
 package dto
 
-// UUIDParam ≈ entityUuid schema (shared.validation.ts) for /:id route params.
+// UUIDParam valida los parámetros de ruta /:id.
 type UUIDParam struct {
 	ID string `uri:"id" binding:"required,uuid"`
 }

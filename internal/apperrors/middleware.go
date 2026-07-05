@@ -1,10 +1,10 @@
-// middleware.go ≈ errors/middleware.ts: normalizes any error into an AppError
-// and writes the exact same JSON shape as the Node backend:
+// middleware.go: normaliza cualquier error a AppError y escribe la respuesta
+// JSON estándar del API:
 //
 //	{ "error": { "code", "message", "status", "details"?, "stack"? } }
 //
-// Pattern: controllers call c.Error(err) (≈ next(error)) and this middleware,
-// registered first, inspects c.Errors after c.Next().
+// Patrón: los controllers llaman c.Error(err) y este middleware, registrado
+// primero, inspecciona c.Errors después de c.Next().
 package apperrors
 
 import (
@@ -18,9 +18,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// Normalize ≈ normalizeError(): AppError passes through; database errors are
-// translated (unique violation → 409, like SequelizeUniqueConstraintError);
-// anything else becomes a 500.
+// Normalize: un AppError pasa tal cual; los errores de base de datos se
+// traducen (violación de unique → 409); todo lo demás se vuelve 500.
 func Normalize(err error) *AppError {
 	var appErr *AppError
 	if errors.As(err, &appErr) {
@@ -63,7 +62,7 @@ func respond(c *gin.Context, env string, logger *slog.Logger, appErr *AppError) 
 	if appErr.Details != nil {
 		body.Details = appErr.Details
 	}
-	// Stack trace only in development (mirror of `envConfig.env === 'development'`)
+	// Stack trace solo en desarrollo
 	if env == "development" && appErr.Err != nil {
 		body.Stack = appErr.Err.Error()
 	}
@@ -78,7 +77,7 @@ func respond(c *gin.Context, env string, logger *slog.Logger, appErr *AppError) 
 	c.JSON(appErr.StatusCode, gin.H{"error": body})
 }
 
-// ErrorHandler ≈ converterErr + errorMiddleware.
+// ErrorHandler escribe la respuesta de error al final de la cadena.
 func ErrorHandler(env string, logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
@@ -90,7 +89,7 @@ func ErrorHandler(env string, logger *slog.Logger) gin.HandlerFunc {
 	}
 }
 
-// NotFoundHandler ≈ notFound(): unmatched routes, same shape and message.
+// NotFoundHandler responde rutas inexistentes con la misma forma JSON.
 func NotFoundHandler(env string, logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		respond(c, env, logger, &AppError{
@@ -101,8 +100,7 @@ func NotFoundHandler(env string, logger *slog.Logger) gin.HandlerFunc {
 	}
 }
 
-// Recovery turns panics into the standard 500 JSON (Express does this via the
-// error middleware; in Gin a panic needs an explicit recovery handler).
+// Recovery convierte panics en el 500 JSON estándar.
 func Recovery(env string, logger *slog.Logger) gin.HandlerFunc {
 	return gin.CustomRecovery(func(c *gin.Context, recovered any) {
 		respond(c, env, logger, &AppError{

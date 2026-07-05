@@ -1,9 +1,9 @@
-// cocina_member.go ≈ cocina-member.model.ts — membership User↔Cocina with role.
+// cocina_member.go — membresía User↔Cocina con rol.
 package models
 
 import "time"
 
-// Cocina roles (≈ ENUM('owner','editor','viewer'); stored as varchar here).
+// Roles de cocina (guardados como varchar).
 const (
 	RolOwner  = "owner"
 	RolEditor = "editor"
@@ -18,7 +18,7 @@ type CocinaMember struct {
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
 
-	// Associations (≈ belongsTo in the Node model)
+	// Asociaciones
 	Cocina *Cocina `gorm:"foreignKey:CocinaID"`
 	User   *User   `gorm:"foreignKey:UserID"`
 }

@@ -1,5 +1,4 @@
-// cocina.go ≈ cocina.dto.ts. Pointers on Update = "optional field present or
-// not" (the Go equivalent of a Joi .min(1) partial update).
+// cocina.go — punteros en Update = "campo presente o ausente" (update parcial).
 package dto
 
 type CreateCocinaDto struct {
@@ -23,7 +22,7 @@ type UpdateCocinaDto struct {
 	ComprasIngredientesMes *float64 `json:"comprasIngredientesMes" binding:"omitempty,min=0"`
 }
 
-// CocinaDto ≈ CocinaDto of the Node backend (same JSON shape) + opex.
+// CocinaDto — forma pública de la cocina, con sus gastos de operación.
 type CocinaDto struct {
 	ID               string  `json:"id"`
 	Name             string  `json:"name"`

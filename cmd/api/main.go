@@ -1,6 +1,5 @@
-// main.go ≈ src/index.ts: load config, connect databases, build the server
-// and listen — plus graceful shutdown, which Node's http.Server hid from you
-// and Go writes out explicitly.
+// main.go: carga la config, conecta las bases, arma el servidor y escucha —
+// con graceful shutdown explícito.
 package main
 
 import (

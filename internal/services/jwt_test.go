@@ -1,5 +1,4 @@
-// jwt_test.go ≈ the Jest unit test of the Node backend, in stdlib `testing`.
-// Run with: go test ./...
+// jwt_test.go — pruebas unitarias del servicio JWT (go test ./...).
 package services
 
 import (

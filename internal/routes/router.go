@@ -1,7 +1,6 @@
-// Package routes mirrors src/routes + index.route.ts + the middleware part of
-// express.ts. New() also does the explicit wiring (services → controllers →
-// routes) that in Node happened implicitly via singleton imports — in Go the
-// dependency graph is written out in one place.
+// Package routes arma el engine: middlewares, wiring explícito
+// (services → controllers → rutas) y registro de endpoints — el grafo de
+// dependencias completo se lee en un solo lugar.
 package routes
 
 import (
@@ -31,12 +30,12 @@ func New(cfg *config.Config, logger *slog.Logger, db *gorm.DB, redisClient *redi
 	router := gin.New()
 	_ = router.SetTrustedProxies(nil) // direct clients in dev; set real proxies on deploy
 
-	// ≈ middlewareSetup() in express.ts
+	// Cadena de middlewares
 	router.Use(apperrors.Recovery(cfg.Env, logger))
 	router.Use(apperrors.ErrorHandler(cfg.Env, logger))
-	router.Use(middlewares.SecurityHeaders()) // ≈ helmet()
-	router.Use(gzip.Gzip(gzip.DefaultCompression)) // ≈ compression()
-	router.Use(cors.New(cors.Config{ // ≈ cors({origin, credentials})
+	router.Use(middlewares.SecurityHeaders())
+	router.Use(gzip.Gzip(gzip.DefaultCompression))
+	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{cfg.FrontendURL},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
@@ -46,7 +45,7 @@ func New(cfg *config.Config, logger *slog.Logger, db *gorm.DB, redisClient *redi
 		router.Use(middlewares.RequestLogger(logger))
 	}
 
-	// --- Wiring (≈ the `export default new Service()` singletons of Node) ---
+	// --- Wiring ---
 	jwtService := services.NewJWTService(cfg.JWTSecret, redisClient, logger)
 	emailService := services.NewEmailService(cfg, logger)
 	authService := services.NewAuthService(db, redisClient, cfg, jwtService, emailService, logger)
@@ -62,7 +61,7 @@ func New(cfg *config.Config, logger *slog.Logger, db *gorm.DB, redisClient *redi
 	recetaController := controllers.NewRecetaController(recetaService)
 	authMiddleware := middlewares.NewAuth(jwtService)
 
-	// ≈ routingSetup(): /api prefix + general rate limit (skipped in test)
+	// Prefijo /api + rate limit general (omitido en test)
 	api := router.Group("/api")
 	if !cfg.IsTest() {
 		api.Use(middlewares.APIRateLimiter(cfg.Env))
@@ -76,7 +75,7 @@ func New(cfg *config.Config, logger *slog.Logger, db *gorm.DB, redisClient *redi
 	registerCocinaRoutes(api, cocinaController, authMiddleware)
 	registerDominioRoutes(api, catalogoController, ingredienteController, recetaController, authMiddleware)
 
-	// ≈ notFound middleware
+	// Rutas no registradas
 	router.NoRoute(apperrors.NotFoundHandler(cfg.Env, logger))
 
 	return router

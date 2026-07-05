@@ -1,5 +1,5 @@
-// email.go ≈ email.service.ts (Resend). Same behavior: if RESEND_API_KEY is
-// empty the email is skipped with a warning, so the app works without it.
+// email.go: correos transaccionales con Resend. Si RESEND_API_KEY está vacío
+// el envío se omite con un warning, así la app funciona sin configurarlo.
 package services
 
 import (
