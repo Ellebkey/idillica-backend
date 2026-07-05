@@ -13,3 +13,4 @@ tmp/
 
 # Test coverage
 coverage.out
+.env.prod
