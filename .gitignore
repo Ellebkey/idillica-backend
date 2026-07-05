@@ -1,0 +1,15 @@
+# Binaries and build output
+bin/
+tmp/
+
+# Env
+.env
+.env.local
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Test coverage
+coverage.out

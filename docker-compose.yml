@@ -1,0 +1,53 @@
+# Infraestructura local del backend Go (Postgres + Redis).
+# Lee las variables del mismo .env de la app; los puertos del host son
+# configurables para convivir con otros stacks (p. ej. el de maguey):
+#   SQL_PORT=5433 REDIS_PORT=6380 docker compose up -d
+#
+# El servicio `api` (perfil "app") corre el backend contenedorizado:
+#   docker compose --profile app up -d --build
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "${SQL_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${SQL_DB:-idilica_go}
+      POSTGRES_USER: ${SQL_USER:-postgres}
+      POSTGRES_PASSWORD: ${SQL_PASSWORD:?SQL_PASSWORD is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SQL_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+
+  api:
+    profiles: ["app"]
+    build: .
+    ports:
+      - "${PORT:-4051}:4051"
+    env_file: .env
+    environment:
+      # Dentro de la red de compose se resuelve por nombre de servicio
+      SQL_HOST: postgres
+      SQL_PORT: "5432"
+      REDIS_URL: redis://redis:6379
+      PORT: "4051"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  postgres_data:
+  redis_data:

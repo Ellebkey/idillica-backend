@@ -1,0 +1,14 @@
+# air ≈ tsx watch: hot reload en desarrollo.
+# Instalar con: go install github.com/air-verse/air@latest
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/api ./cmd/api"
+bin = "./tmp/api"
+include_ext = ["go"]
+exclude_dir = ["tmp", "bin"]
+delay = 200
+
+[misc]
+clean_on_exit = true
