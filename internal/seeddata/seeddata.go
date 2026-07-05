@@ -26,7 +26,7 @@ type Ingrediente struct {
 }
 
 type Linea struct {
-	IngredienteSlug string  // XOR con RecetaSlug
+	IngredienteSlug string // XOR con RecetaSlug
 	RecetaSlug      string
 	Cantidad        float64
 }

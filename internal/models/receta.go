@@ -9,22 +9,22 @@ package models
 import "time"
 
 type Receta struct {
-	ID                string   `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
-	CocinaID          string   `gorm:"column:cocina_id;type:uuid;not null;index"`
-	Nombre            string   `gorm:"size:120;not null"`
-	Categoria         string   `gorm:"size:40;not null;default:Pasteles"`
-	Porciones         int      `gorm:"not null;default:1"`
-	Etiqueta          string   `gorm:"size:40;not null;default:piezas"` // "piezas", "rebanadas", "Rinde 950 g"
-	EtiquetaSingular  string   `gorm:"column:etiqueta_singular;size:40;not null;default:pieza"`
-	RendimientoKg     float64  `gorm:"column:rendimiento_kg;not null;default:0"`
-	PrecioVenta       *float64 `gorm:"column:precio_venta"` // null = sin precio (subrecetas)
-	IvaPct            float64  `gorm:"column:iva_pct;not null;default:16"`
-	EsSubreceta       bool     `gorm:"column:es_subreceta;not null;default:false"`
-	Alergenos         StringSlice `gorm:"type:json"`
-	Pasos             StringSlice `gorm:"type:json"`
-	Fotos             StringSlice `gorm:"type:json"`
-	CreatedAt         time.Time   `gorm:"column:created_at"`
-	UpdatedAt         time.Time   `gorm:"column:updated_at"`
+	ID               string      `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	CocinaID         string      `gorm:"column:cocina_id;type:uuid;not null;index"`
+	Nombre           string      `gorm:"size:120;not null"`
+	Categoria        string      `gorm:"size:40;not null;default:Pasteles"`
+	Porciones        int         `gorm:"not null;default:1"`
+	Etiqueta         string      `gorm:"size:40;not null;default:piezas"` // "piezas", "rebanadas", "Rinde 950 g"
+	EtiquetaSingular string      `gorm:"column:etiqueta_singular;size:40;not null;default:pieza"`
+	RendimientoKg    float64     `gorm:"column:rendimiento_kg;not null;default:0"`
+	PrecioVenta      *float64    `gorm:"column:precio_venta"` // null = sin precio (subrecetas)
+	IvaPct           float64     `gorm:"column:iva_pct;not null;default:16"`
+	EsSubreceta      bool        `gorm:"column:es_subreceta;not null;default:false"`
+	Alergenos        StringSlice `gorm:"type:json"`
+	Pasos            StringSlice `gorm:"type:json"`
+	Fotos            StringSlice `gorm:"type:json"`
+	CreatedAt        time.Time   `gorm:"column:created_at"`
+	UpdatedAt        time.Time   `gorm:"column:updated_at"`
 
 	Lineas []RecetaLinea `gorm:"foreignKey:RecetaID"`
 }

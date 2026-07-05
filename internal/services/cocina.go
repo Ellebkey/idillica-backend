@@ -182,7 +182,7 @@ func toCocinaDto(cocina *models.Cocina, rol string) *dto.CocinaDto {
 
 		Rol: rol,
 		// timestamps en UTC con sufijo Z
-		CreatedAt:        cocina.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:        cocina.UpdatedAt.UTC().Format(time.RFC3339),
+		CreatedAt: cocina.CreatedAt.UTC().Format(time.RFC3339),
+		UpdatedAt: cocina.UpdatedAt.UTC().Format(time.RFC3339),
 	}
 }
