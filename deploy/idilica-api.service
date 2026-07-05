@@ -1,14 +1,14 @@
-# systemd unit — el "pm2" nativo de Linux para el binario Go.
+# systemd unit — supervisa el binario Go (corre como root: es el único
+# usuario del droplet).
 #
-# Instalación en el droplet:
-#   sudo cp idilica-api.service /etc/systemd/system/
-#   sudo systemctl daemon-reload
-#   sudo systemctl enable --now idilica-api     # arranca ahora y en cada boot
+# Instalación (una vez):
+#   scp deploy/idilica-api.service root@<host>:/etc/systemd/system/
+#   ssh root@<host> 'systemctl daemon-reload && systemctl enable idilica-api'
 #
 # Operación diaria:
-#   systemctl status idilica-api                # estado (≈ pm2 status)
-#   sudo systemctl restart idilica-api          # reinicio (≈ pm2 restart)
-#   journalctl -u idilica-api -f                # logs en vivo (≈ pm2 logs)
+#   systemctl status idilica-api
+#   systemctl restart idilica-api
+#   journalctl -u idilica-api -f
 [Unit]
 Description=Idilica API (Go)
 After=network-online.target postgresql.service redis-server.service
@@ -16,15 +16,12 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ellebkey
-# El binario lee el .env de su WorkingDirectory (godotenv)
-WorkingDirectory=/home/ellebkey/apps/idilica
-ExecStart=/home/ellebkey/apps/idilica/api
+User=root
+# El binario lee el .env de su WorkingDirectory
+WorkingDirectory=/home/ellebkey/apps/idilica/backend
+ExecStart=/home/ellebkey/apps/idilica/backend/api
 Restart=always
 RestartSec=3
-
-# Endurecimiento básico
-NoNewPrivileges=true
 PrivateTmp=true
 
 [Install]
