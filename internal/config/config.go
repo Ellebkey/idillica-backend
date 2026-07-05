@@ -12,10 +12,8 @@ import (
 )
 
 // Config is the Go equivalent of the `envConfig` object in config.ts.
-// Env var NAMES are kept identical to the Node backend so the same .env
-// works on both (only PORT and SQL_DB need different values).
 type Config struct {
-	Env                      string // NODE_ENV: development | production | stage | test
+	Env                      string // APP_ENV: development | production | stage | test
 	Port                     int
 	JWTSecret                string
 	FrontendURL              string
@@ -39,7 +37,7 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		Env:                      getEnv("NODE_ENV", "development"),
+		Env:                      getEnv("APP_ENV", "development"),
 		Port:                     getEnvInt("PORT", 4051),
 		JWTSecret:                os.Getenv("JWT_SECRET"),
 		FrontendURL:              getEnv("FRONTEND_URL", "http://localhost:5273"),
@@ -58,7 +56,7 @@ func Load() (*Config, error) {
 
 	validEnvs := map[string]bool{"development": true, "production": true, "stage": true, "test": true}
 	if !validEnvs[cfg.Env] {
-		return nil, fmt.Errorf("config validation error: NODE_ENV must be one of development|production|stage|test, got %q", cfg.Env)
+		return nil, fmt.Errorf("config validation error: APP_ENV must be one of development|production|stage|test, got %q", cfg.Env)
 	}
 
 	// Same required set as the Joi schema
