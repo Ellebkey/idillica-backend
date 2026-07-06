@@ -30,9 +30,10 @@ func New(cfg *config.Config, logger *slog.Logger, db *gorm.DB, redisClient *redi
 	router := gin.New()
 	_ = router.SetTrustedProxies(nil) // direct clients in dev; set real proxies on deploy
 
-	// Cadena de middlewares
-	router.Use(apperrors.Recovery(cfg.Env, logger))
-	router.Use(apperrors.ErrorHandler(cfg.Env, logger))
+	// Cadena de middlewares. El ORDEN importa: el manejador de errores debe ir
+	// DESPUÉS (más adentro) de gzip — si fuera antes, al abortar un request
+	// (p. ej. token expirado) gzip cierra la respuesta vacía con 200 durante el
+	// unwind y el 401/500 jamás se escribe.
 	router.Use(middlewares.SecurityHeaders())
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	router.Use(cors.New(cors.Config{
@@ -41,9 +42,11 @@ func New(cfg *config.Config, logger *slog.Logger, db *gorm.DB, redisClient *redi
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 	}))
+	router.Use(apperrors.Recovery(cfg.Env, logger))
 	if cfg.IsDevelopment() || cfg.IsTest() {
 		router.Use(middlewares.RequestLogger(logger))
 	}
+	router.Use(apperrors.ErrorHandler(cfg.Env, logger))
 
 	// --- Wiring ---
 	jwtService := services.NewJWTService(cfg.JWTSecret, redisClient, logger)
