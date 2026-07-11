@@ -148,11 +148,11 @@ func Nivel(pct *float64, objetivo float64) string {
 }
 
 // GatherNeeds ≈ gatherNeeds() del prototipo: acumula cuánto se necesita de
-// cada ingrediente para producir una receta UNA vez, expandiendo subrecetas
-// recursivamente (multiplicador = cantidadKg / rendimientoKg de la sub).
-func (c *Catalogo) GatherNeeds(recetaID string) map[string]float64 {
+// cada ingrediente para producir una receta `mult` veces, expandiendo
+// subrecetas recursivamente (multiplicador = cantidadKg / rendimientoKg).
+func (c *Catalogo) GatherNeeds(recetaID string, mult float64) map[string]float64 {
 	acc := map[string]float64{}
-	c.gatherNeeds(recetaID, 1, acc, map[string]bool{})
+	c.gatherNeeds(recetaID, mult, acc, map[string]bool{})
 	return acc
 }
 

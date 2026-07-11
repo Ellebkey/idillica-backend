@@ -112,13 +112,19 @@ func TestGatherNeedsRecursivo(t *testing.T) {
 
 	// Choux usa mousseline (0.95 kg / rinde 0.95 → mult 1): las necesidades
 	// suman lo directo + lo de la subreceta.
-	needs := c.GatherNeeds("choux")
+	needs := c.GatherNeeds("choux", 1)
 	almostEqual(t, "harina", needs["harina"], 0.25, 1e-9)
 	almostEqual(t, "mantequilla", needs["mantequilla"], 0.1+0.25, 1e-9) // directa + sub
 	almostEqual(t, "huevo", needs["huevo"], 4+4, 1e-9)
 	almostEqual(t, "leche", needs["leche"], 0.25+0.2, 1e-9)
 	almostEqual(t, "azucar", needs["azucar"], 0.0315+0.12, 1e-9)
 	almostEqual(t, "almendra (solo vía sub)", needs["almendra"], 0.2, 1e-9)
+
+	// Escalada ×3 ("preparé el triple"): todo lineal, incluidas las subrecetas.
+	escalado := c.GatherNeeds("choux", 3)
+	almostEqual(t, "harina ×3", escalado["harina"], 0.75, 1e-9)
+	almostEqual(t, "azucar ×3", escalado["azucar"], (0.0315+0.12)*3, 1e-9)
+	almostEqual(t, "almendra ×3", escalado["almendra"], 0.6, 1e-9)
 }
 
 func TestTasaOperacion(t *testing.T) {

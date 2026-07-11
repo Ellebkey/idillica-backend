@@ -72,9 +72,13 @@ func (s *RecetaService) Delete(ctx context.Context, userID, recetaID string) err
 }
 
 // Producir — "Produje esta receta": calcula las necesidades RECURSIVAS
-// (incluye subrecetas) y las descuenta del inventario (clamp a 0).
-// Devuelve los ingredientes afectados ya actualizados.
-func (s *RecetaService) Producir(ctx context.Context, userID, recetaID string) ([]dto.IngredienteDto, error) {
+// (incluye subrecetas) multiplicadas por `factor` (lotes producidos, p. ej.
+// 3.0 = escalada de 10 a 30 porciones) y las descuenta del inventario
+// (clamp a 0). Devuelve los ingredientes afectados ya actualizados.
+func (s *RecetaService) Producir(ctx context.Context, userID, recetaID string, factor float64) ([]dto.IngredienteDto, error) {
+	if factor <= 0 {
+		factor = 1
+	}
 	receta, err := s.loadReceta(ctx, recetaID)
 	if err != nil {
 		return nil, err
@@ -87,7 +91,7 @@ func (s *RecetaService) Producir(ctx context.Context, userID, recetaID string) (
 	if err != nil {
 		return nil, err
 	}
-	needs := grafo.GatherNeeds(recetaID)
+	needs := grafo.GatherNeeds(recetaID, factor)
 	if len(needs) == 0 {
 		return nil, apperrors.NewBusinessRule("Esta receta no tiene ingredientes que descontar")
 	}
@@ -109,7 +113,7 @@ func (s *RecetaService) Producir(ctx context.Context, userID, recetaID string) (
 		return nil, err
 	}
 
-	s.logger.Info("Producción descontada", "recetaId", recetaID, "ingredientes", len(ids))
+	s.logger.Info("Producción descontada", "recetaId", recetaID, "factor", factor, "ingredientes", len(ids))
 
 	var ings []models.Ingrediente
 	err = s.db.WithContext(ctx).

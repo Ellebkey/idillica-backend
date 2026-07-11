@@ -50,6 +50,7 @@ func (rc *RecetaController) Update(c *gin.Context) {
 }
 
 // Producir — "Produje esta receta": descuenta el inventario recursivamente.
+// El body {factor} es opcional (default 1; ×3 = receta escalada a triple).
 func (rc *RecetaController) Producir(c *gin.Context) {
 	userID, err := utils.RequireUserID(c)
 	if err != nil {
@@ -61,7 +62,14 @@ func (rc *RecetaController) Producir(c *gin.Context) {
 		_ = c.Error(err)
 		return
 	}
-	afectados, err := rc.service.Producir(c.Request.Context(), userID, params.ID)
+	input := &dto.ProducirDto{}
+	if c.Request.ContentLength > 0 {
+		if input, err = utils.BindJSON[dto.ProducirDto](c); err != nil {
+			_ = c.Error(err)
+			return
+		}
+	}
+	afectados, err := rc.service.Producir(c.Request.Context(), userID, params.ID, input.Factor)
 	if err != nil {
 		_ = c.Error(err)
 		return

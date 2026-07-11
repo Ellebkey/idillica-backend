@@ -100,6 +100,9 @@ func run(db *gorm.DB, email string, force bool) error {
 				caduca := now.AddDate(0, 0, stock.CaducaDias)
 				ing.CaducaAt = &caduca
 			}
+			if escalado, ok := seeddata.Escalados[seed.Slug]; ok {
+				ing.Escalado = escalado
+			}
 			if err := tx.Create(&ing).Error; err != nil {
 				return err
 			}

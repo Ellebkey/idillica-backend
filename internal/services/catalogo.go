@@ -108,6 +108,7 @@ func toIngredienteDto(ing *models.Ingrediente) dto.IngredienteDto {
 		Productos:  make([]dto.ProductoDto, 0, len(ing.Productos)),
 		Existencia: ing.Existencia,
 		Minimo:     ing.Minimo,
+		Escalado:   ing.Escalado,
 	}
 	if ing.CaducaAt != nil {
 		fecha := ing.CaducaAt.Format("2006-01-02")

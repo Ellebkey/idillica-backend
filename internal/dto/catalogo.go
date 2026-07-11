@@ -41,6 +41,9 @@ type IngredienteDto struct {
 	Existencia float64 `json:"existencia"`
 	Minimo     float64 `json:"minimo"`
 	CaducaAt   *string `json:"caducaAt"` // YYYY-MM-DD o null
+
+	// Escalado de recetas (normal | leudante | sazon)
+	Escalado string `json:"escalado"`
 }
 
 type HerramientaDto struct {
@@ -101,12 +104,19 @@ type CreateIngredienteDto struct {
 	Origen     string          `json:"mermaOrigen" binding:"omitempty,oneof=referencia manual medido"`
 	Existencia float64         `json:"existencia" binding:"min=0"`
 	Minimo     float64         `json:"minimo" binding:"min=0"`
+	Escalado   string          `json:"escalado" binding:"omitempty,oneof=normal leudante sazon"`
 	Productos  []ProductoInput `json:"productos" binding:"required,min=1,dive"`
 }
 
 type UpdateIngredienteDto struct {
 	Nombre     *string `json:"nombre" binding:"omitempty,min=1,max=120"`
 	UnidadBase *string `json:"unidadBase" binding:"omitempty,oneof=kg L pieza"`
+	Escalado   *string `json:"escalado" binding:"omitempty,oneof=normal leudante sazon"`
+}
+
+// ProducirDto — multiplicador del lote ("produje ×3"); omitido = 1.
+type ProducirDto struct {
+	Factor float64 `json:"factor" binding:"omitempty,gt=0"`
 }
 
 type SetMermaDto struct {

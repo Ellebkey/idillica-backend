@@ -23,6 +23,14 @@ const (
 	MermaMedido     = "medido"
 )
 
+// Comportamiento al escalar recetas: leudantes y sazón no suben lineal
+// (la app solo SUGIERE el ajuste; la repostera decide).
+const (
+	EscaladoNormal   = "normal"
+	EscaladoLeudante = "leudante"
+	EscaladoSazon    = "sazon"
+)
+
 type Ingrediente struct {
 	ID          string  `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
 	CocinaID    string  `gorm:"column:cocina_id;type:uuid;not null;index"`
@@ -36,6 +44,9 @@ type Ingrediente struct {
 	Existencia float64    `gorm:"not null;default:0"`
 	Minimo     float64    `gorm:"not null;default:0"`
 	CaducaAt   *time.Time `gorm:"column:caduca_at;type:date"`
+
+	// Cómo escala al multiplicar una receta (normal | leudante | sazon)
+	Escalado string `gorm:"size:12;not null;default:normal"`
 
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`

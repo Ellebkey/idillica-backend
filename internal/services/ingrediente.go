@@ -55,6 +55,10 @@ func (s *IngredienteService) Create(ctx context.Context, userID, cocinaID string
 	if origen == "" {
 		origen = models.MermaReferencia
 	}
+	escalado := d.Escalado
+	if escalado == "" {
+		escalado = models.EscaladoNormal
+	}
 
 	ing := models.Ingrediente{
 		CocinaID:    cocinaID,
@@ -64,6 +68,7 @@ func (s *IngredienteService) Create(ctx context.Context, userID, cocinaID string
 		MermaOrigen: origen,
 		Existencia:  d.Existencia,
 		Minimo:      d.Minimo,
+		Escalado:    escalado,
 	}
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -110,6 +115,9 @@ func (s *IngredienteService) Update(ctx context.Context, userID, ingredienteID s
 	}
 	if d.UnidadBase != nil {
 		updates["unidad_base"] = *d.UnidadBase
+	}
+	if d.Escalado != nil {
+		updates["escalado"] = *d.Escalado
 	}
 	if len(updates) > 0 {
 		if err := s.db.WithContext(ctx).Model(&models.Ingrediente{}).Where("id = ?", ing.ID).Updates(updates).Error; err != nil {

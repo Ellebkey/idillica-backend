@@ -85,6 +85,14 @@ var Stocks = map[string]Stock{
 	"levadura":    {0.6, 0.25, 45},
 }
 
+// Escalado no lineal del catálogo semilla (el resto queda "normal"):
+// leudantes al 75% en lotes grandes, sazón con factor^0.7.
+var Escalados = map[string]string{
+	"levadura": "leudante",
+	"canela":   "sazon",
+	"vainilla": "sazon",
+}
+
 // Equipo semilla del handoff.
 type Equipo struct {
 	Nombre, Detalle, Estado string
