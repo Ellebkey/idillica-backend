@@ -56,12 +56,14 @@ func New(cfg *config.Config, logger *slog.Logger, db *gorm.DB, redisClient *redi
 	catalogoService := services.NewCatalogoService(db, cocinaService, logger)
 	ingredienteService := services.NewIngredienteService(db, catalogoService, logger)
 	recetaService := services.NewRecetaService(db, catalogoService, logger)
+	herramientaService := services.NewHerramientaService(db, catalogoService, logger)
 
 	authController := controllers.NewAuthController(authService)
 	cocinaController := controllers.NewCocinaController(cocinaService)
 	catalogoController := controllers.NewCatalogoController(catalogoService)
 	ingredienteController := controllers.NewIngredienteController(ingredienteService)
 	recetaController := controllers.NewRecetaController(recetaService)
+	herramientaController := controllers.NewHerramientaController(herramientaService)
 	authMiddleware := middlewares.NewAuth(jwtService)
 
 	// Prefijo /api + rate limit general (omitido en test)
@@ -76,7 +78,7 @@ func New(cfg *config.Config, logger *slog.Logger, db *gorm.DB, redisClient *redi
 
 	registerAuthRoutes(api, authController, authMiddleware, cfg)
 	registerCocinaRoutes(api, cocinaController, authMiddleware)
-	registerDominioRoutes(api, catalogoController, ingredienteController, recetaController, authMiddleware)
+	registerDominioRoutes(api, catalogoController, ingredienteController, recetaController, herramientaController, authMiddleware)
 
 	// Rutas no registradas
 	router.NoRoute(apperrors.NotFoundHandler(cfg.Env, logger))

@@ -107,6 +107,20 @@ func TestDeteccionDeCiclos(t *testing.T) {
 	_ = c.CostoReceta("choux") // must terminate
 }
 
+func TestGatherNeedsRecursivo(t *testing.T) {
+	c := buildCatalogo()
+
+	// Choux usa mousseline (0.95 kg / rinde 0.95 → mult 1): las necesidades
+	// suman lo directo + lo de la subreceta.
+	needs := c.GatherNeeds("choux")
+	almostEqual(t, "harina", needs["harina"], 0.25, 1e-9)
+	almostEqual(t, "mantequilla", needs["mantequilla"], 0.1+0.25, 1e-9) // directa + sub
+	almostEqual(t, "huevo", needs["huevo"], 4+4, 1e-9)
+	almostEqual(t, "leche", needs["leche"], 0.25+0.2, 1e-9)
+	almostEqual(t, "azucar", needs["azucar"], 0.0315+0.12, 1e-9)
+	almostEqual(t, "almendra (solo vía sub)", needs["almendra"], 0.2, 1e-9)
+}
+
 func TestTasaOperacion(t *testing.T) {
 	cocina := &models.Cocina{
 		GastoSueldos: seeddata.Opex.Sueldos, GastoGas: seeddata.Opex.Gas,

@@ -62,6 +62,8 @@ func (s *IngredienteService) Create(ctx context.Context, userID, cocinaID string
 		UnidadBase:  d.UnidadBase,
 		MermaPct:    d.MermaPct,
 		MermaOrigen: origen,
+		Existencia:  d.Existencia,
+		Minimo:      d.Minimo,
 	}
 
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -278,6 +280,131 @@ func (s *IngredienteService) ActivarProducto(ctx context.Context, userID, ingred
 	}
 
 	return s.reload(ctx, ing.ID)
+}
+
+// RegistrarCompra — sheet "Registrar compra": entran N presentaciones del
+// producto ACTIVO al inventario; si el precio por unidad cambió, se actualiza
+// el producto (+ historial + fecha de frescura).
+func (s *IngredienteService) RegistrarCompra(ctx context.Context, userID, ingredienteID string, d *dto.RegistrarCompraDto) (*dto.IngredienteDto, error) {
+	ing, err := s.load(ctx, userID, ingredienteID)
+	if err != nil {
+		return nil, err
+	}
+
+	activo := ProductoActivo(ing)
+	if activo == nil {
+		return nil, apperrors.NewBusinessRule("Este ingrediente no tiene producto de compra; agrégalo primero")
+	}
+
+	entra := float64(d.Unidades) * activo.Cantidad
+	now := time.Now()
+
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		err := tx.Model(&models.Ingrediente{}).Where("id = ?", ing.ID).
+			Update("existencia", gorm.Expr("existencia + ?", entra)).Error
+		if err != nil {
+			return err
+		}
+		if d.Precio > 0 && d.Precio != activo.Precio {
+			err := tx.Model(&models.ProductoCompra{}).Where("id = ?", activo.ID).
+				Updates(map[string]any{"precio": d.Precio, "precio_actualizado_at": now}).Error
+			if err != nil {
+				return err
+			}
+			return tx.Create(&models.HistorialPrecio{ProductoID: activo.ID, Precio: d.Precio, Fecha: now}).Error
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	s.logger.Info("Compra registrada", "ingredienteId", ing.ID, "entra", entra)
+	return s.reload(ctx, ing.ID)
+}
+
+// SetExistencia — ajuste directo de inventario (existencia, mínimo, caducidad).
+func (s *IngredienteService) SetExistencia(ctx context.Context, userID, ingredienteID string, d *dto.ExistenciaDto) (*dto.IngredienteDto, error) {
+	ing, err := s.load(ctx, userID, ingredienteID)
+	if err != nil {
+		return nil, err
+	}
+
+	updates := map[string]any{}
+	if d.Existencia != nil {
+		updates["existencia"] = *d.Existencia
+	}
+	if d.Minimo != nil {
+		updates["minimo"] = *d.Minimo
+	}
+	if d.CaducaAt != nil {
+		if *d.CaducaAt == "" {
+			updates["caduca_at"] = nil
+		} else {
+			fecha, err := time.Parse("2006-01-02", *d.CaducaAt)
+			if err != nil {
+				return nil, apperrors.NewValidation("Validation failed", []map[string]string{
+					{"field": "caducaAt", "message": "usa el formato YYYY-MM-DD"},
+				})
+			}
+			updates["caduca_at"] = fecha
+		}
+	}
+	if len(updates) > 0 {
+		if err := s.db.WithContext(ctx).Model(&models.Ingrediente{}).Where("id = ?", ing.ID).Updates(updates).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	return s.reload(ctx, ing.ID)
+}
+
+// Conteo — "Contar mi cocina": aplica en bloque las existencias contadas.
+// Devuelve los ingredientes actualizados.
+func (s *IngredienteService) Conteo(ctx context.Context, userID, cocinaID string, d *dto.ConteoDto) ([]dto.IngredienteDto, error) {
+	if err := s.catalogo.RequireEditor(ctx, userID, cocinaID); err != nil {
+		return nil, err
+	}
+
+	ids := make([]string, 0, len(d.Items))
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, item := range d.Items {
+			res := tx.Model(&models.Ingrediente{}).
+				Where("id = ? AND cocina_id = ?", item.IngredienteID, cocinaID).
+				Update("existencia", item.Cantidad)
+			if res.Error != nil {
+				return res.Error
+			}
+			if res.RowsAffected == 0 {
+				return apperrors.NewNotFound("Ingrediente", item.IngredienteID)
+			}
+			ids = append(ids, item.IngredienteID)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	s.logger.Info("Conteo aplicado", "cocinaId", cocinaID, "items", len(ids))
+	return s.reloadVarios(ctx, ids)
+}
+
+func (s *IngredienteService) reloadVarios(ctx context.Context, ids []string) ([]dto.IngredienteDto, error) {
+	var ings []models.Ingrediente
+	err := s.db.WithContext(ctx).
+		Preload("Productos", func(db *gorm.DB) *gorm.DB { return db.Order("orden ASC, created_at ASC") }).
+		Preload("Productos.Historial", func(db *gorm.DB) *gorm.DB { return db.Order("fecha ASC") }).
+		Where("id IN ?", ids).
+		Find(&ings).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]dto.IngredienteDto, 0, len(ings))
+	for i := range ings {
+		out = append(out, toIngredienteDto(&ings[i]))
+	}
+	return out, nil
 }
 
 // SetMerma stores a manual/reference merma directly.

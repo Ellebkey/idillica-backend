@@ -58,6 +58,7 @@ func NewDatabase(cfg *Config, logger *slog.Logger) (*gorm.DB, error) {
 		&models.User{}, &models.Cocina{}, &models.CocinaMember{},
 		&models.Ingrediente{}, &models.ProductoCompra{}, &models.HistorialPrecio{},
 		&models.MedicionMerma{}, &models.Receta{}, &models.RecetaLinea{},
+		&models.Herramienta{},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("database synchronization failed: %w", err)

@@ -111,6 +111,25 @@ func (ic *IngredienteController) ActivarProducto(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+func (ic *IngredienteController) RegistrarCompra(c *gin.Context) {
+	handle(c, func(userID string, params *dto.UUIDParam, input *dto.RegistrarCompraDto) (any, error) {
+		return ic.service.RegistrarCompra(c.Request.Context(), userID, params.ID, input)
+	})
+}
+
+func (ic *IngredienteController) SetExistencia(c *gin.Context) {
+	handle(c, func(userID string, params *dto.UUIDParam, input *dto.ExistenciaDto) (any, error) {
+		return ic.service.SetExistencia(c.Request.Context(), userID, params.ID, input)
+	})
+}
+
+// Conteo — el :id de la ruta es la COCINA (aplica existencias en bloque).
+func (ic *IngredienteController) Conteo(c *gin.Context) {
+	handle(c, func(userID string, params *dto.UUIDParam, input *dto.ConteoDto) (any, error) {
+		return ic.service.Conteo(c.Request.Context(), userID, params.ID, input)
+	})
+}
+
 func (ic *IngredienteController) SetMerma(c *gin.Context) {
 	handle(c, func(userID string, params *dto.UUIDParam, input *dto.SetMermaDto) (any, error) {
 		return ic.service.SetMerma(c.Request.Context(), userID, params.ID, input)

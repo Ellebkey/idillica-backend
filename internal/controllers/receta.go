@@ -49,6 +49,26 @@ func (rc *RecetaController) Update(c *gin.Context) {
 	})
 }
 
+// Producir — "Produje esta receta": descuenta el inventario recursivamente.
+func (rc *RecetaController) Producir(c *gin.Context) {
+	userID, err := utils.RequireUserID(c)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	params, err := utils.BindUri[dto.UUIDParam](c)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	afectados, err := rc.service.Producir(c.Request.Context(), userID, params.ID)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, afectados)
+}
+
 func (rc *RecetaController) Delete(c *gin.Context) {
 	userID, err := utils.RequireUserID(c)
 	if err != nil {

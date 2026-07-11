@@ -13,6 +13,7 @@ func registerDominioRoutes(
 	catalogo *controllers.CatalogoController,
 	ingredientes *controllers.IngredienteController,
 	recetas *controllers.RecetaController,
+	herramientas *controllers.HerramientaController,
 	auth *middlewares.Auth,
 ) {
 	canAccess := auth.CheckAuth()
@@ -35,4 +36,13 @@ func registerDominioRoutes(
 	api.POST("/cocinas/:id/recetas", canAccess, recetas.Create)
 	api.PUT("/recetas/:id", canAccess, recetas.Update)
 	api.DELETE("/recetas/:id", canAccess, recetas.Delete)
+
+	// Inventario
+	api.POST("/ingredientes/:id/compra", canAccess, ingredientes.RegistrarCompra)
+	api.PUT("/ingredientes/:id/existencia", canAccess, ingredientes.SetExistencia)
+	api.POST("/cocinas/:id/conteo", canAccess, ingredientes.Conteo)
+	api.POST("/recetas/:id/producir", canAccess, recetas.Producir)
+	api.POST("/cocinas/:id/herramientas", canAccess, herramientas.Create)
+	api.PUT("/herramientas/:id", canAccess, herramientas.Update)
+	api.DELETE("/herramientas/:id", canAccess, herramientas.Delete)
 }

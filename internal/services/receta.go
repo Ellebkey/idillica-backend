@@ -71,6 +71,62 @@ func (s *RecetaService) Delete(ctx context.Context, userID, recetaID string) err
 	})
 }
 
+// Producir — "Produje esta receta": calcula las necesidades RECURSIVAS
+// (incluye subrecetas) y las descuenta del inventario (clamp a 0).
+// Devuelve los ingredientes afectados ya actualizados.
+func (s *RecetaService) Producir(ctx context.Context, userID, recetaID string) ([]dto.IngredienteDto, error) {
+	receta, err := s.loadReceta(ctx, recetaID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.catalogo.RequireEditor(ctx, userID, receta.CocinaID); err != nil {
+		return nil, err
+	}
+
+	grafo, err := s.buildGrafo(ctx, receta.CocinaID)
+	if err != nil {
+		return nil, err
+	}
+	needs := grafo.GatherNeeds(recetaID)
+	if len(needs) == 0 {
+		return nil, apperrors.NewBusinessRule("Esta receta no tiene ingredientes que descontar")
+	}
+
+	ids := make([]string, 0, len(needs))
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for ingredienteID, cantidad := range needs {
+			err := tx.Model(&models.Ingrediente{}).
+				Where("id = ? AND cocina_id = ?", ingredienteID, receta.CocinaID).
+				Update("existencia", gorm.Expr("GREATEST(existencia - ?, 0)", cantidad)).Error
+			if err != nil {
+				return err
+			}
+			ids = append(ids, ingredienteID)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	s.logger.Info("Producción descontada", "recetaId", recetaID, "ingredientes", len(ids))
+
+	var ings []models.Ingrediente
+	err = s.db.WithContext(ctx).
+		Preload("Productos", func(db *gorm.DB) *gorm.DB { return db.Order("orden ASC, created_at ASC") }).
+		Preload("Productos.Historial", func(db *gorm.DB) *gorm.DB { return db.Order("fecha ASC") }).
+		Where("id IN ?", ids).
+		Find(&ings).Error
+	if err != nil {
+		return nil, err
+	}
+	out := make([]dto.IngredienteDto, 0, len(ings))
+	for i := range ings {
+		out = append(out, toIngredienteDto(&ings[i]))
+	}
+	return out, nil
+}
+
 // save validates lines (XOR, same-cocina references, no cycles) and writes
 // the recipe with a full line replace — the editor's "Guardar".
 func (s *RecetaService) save(ctx context.Context, cocinaID, recetaID string, d *dto.SaveRecetaDto) (*dto.RecetaDto, error) {

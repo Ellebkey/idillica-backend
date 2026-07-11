@@ -60,6 +60,45 @@ var Opex = struct {
 	Sueldos, Gas, Luz, Equipo, Compras float64
 }{12000, 1800, 1400, 900, 38000}
 
+// Stock — inventario semilla del handoff: existencia, mínimo (dispara "queda
+// poco") y días para caducar (el seeder los convierte a fecha).
+type Stock struct {
+	Existencia, Minimo float64
+	CaducaDias         int
+}
+
+var Stocks = map[string]Stock{
+	"harina":      {26, 10, 180},
+	"mantequilla": {4, 3, 24},
+	"huevo":       {42, 30, 12},
+	"azucar":      {8, 5, 365},
+	"chocolate":   {2.4, 1, 200},
+	"pina":        {3, 2, 6},
+	"leche":       {6, 4, 10},
+	"crema":       {1.5, 2, 8},
+	"fresa":       {1.2, 2, 3},
+	"frambuesa":   {0.8, 1, 60},
+	"limon":       {2, 1, 15},
+	"almendra":    {1.5, 1, 90},
+	"vainilla":    {0.4, 0.25, 300},
+	"canela":      {0.3, 0.2, 400},
+	"levadura":    {0.6, 0.25, 45},
+}
+
+// Equipo semilla del handoff.
+type Equipo struct {
+	Nombre, Detalle, Estado string
+}
+
+var Equipos = []Equipo{
+	{"Batidora planetaria 5 L", "KitchenAid · comprada en 2023", "Buen estado"},
+	{"Horno de piso", "San-Son · servicio programado en agosto", "Servicio pronto"},
+	{"Moldes redondos 22 cm", "6 piezas · aluminio", "Buen estado"},
+	{"Charolas para muffin", "4 piezas · 12 cavidades · 1 con óxido", "Reponer 1"},
+	{"Mangas y duyas", "12 duyas · 2 mangas reutilizables", "Buen estado"},
+	{"Báscula digital", "Rhino 5 kg · precisión 1 g", "Buen estado"},
+}
+
 const ObjetivoFoodCost = 30 // % entero
 
 var Ingredientes = []Ingrediente{

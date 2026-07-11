@@ -94,6 +94,12 @@ func run(db *gorm.DB, email string, force bool) error {
 				CocinaID: cocinaID, Nombre: seed.Nombre, UnidadBase: seed.Unidad,
 				MermaPct: seed.MermaPct, MermaOrigen: seed.MermaOrigen,
 			}
+			if stock, ok := seeddata.Stocks[seed.Slug]; ok {
+				ing.Existencia = stock.Existencia
+				ing.Minimo = stock.Minimo
+				caduca := now.AddDate(0, 0, stock.CaducaDias)
+				ing.CaducaAt = &caduca
+			}
 			if err := tx.Create(&ing).Error; err != nil {
 				return err
 			}
@@ -134,6 +140,14 @@ func run(db *gorm.DB, email string, force bool) error {
 				if err := tx.Create(&medicion).Error; err != nil {
 					return err
 				}
+			}
+		}
+
+		// --- Equipo ---
+		for _, eq := range seeddata.Equipos {
+			h := models.Herramienta{CocinaID: cocinaID, Nombre: eq.Nombre, Detalle: eq.Detalle, Estado: eq.Estado}
+			if err := tx.Create(&h).Error; err != nil {
+				return err
 			}
 		}
 
@@ -203,6 +217,9 @@ func wipe(tx *gorm.DB, cocinaID string) error {
 		return err
 	}
 	if err := tx.Exec(`DELETE FROM medicion_merma WHERE ingrediente_id IN (SELECT id FROM ingrediente WHERE cocina_id = ?)`, cocinaID).Error; err != nil {
+		return err
+	}
+	if err := tx.Where("cocina_id = ?", cocinaID).Delete(&models.Herramienta{}).Error; err != nil {
 		return err
 	}
 	return tx.Where("cocina_id = ?", cocinaID).Delete(&models.Ingrediente{}).Error

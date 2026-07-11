@@ -36,6 +36,18 @@ type IngredienteDto struct {
 	UnidadBase string        `json:"unidadBase"`
 	Merma      MermaDto      `json:"merma"`
 	Productos  []ProductoDto `json:"productos"`
+
+	// Inventario
+	Existencia float64 `json:"existencia"`
+	Minimo     float64 `json:"minimo"`
+	CaducaAt   *string `json:"caducaAt"` // YYYY-MM-DD o null
+}
+
+type HerramientaDto struct {
+	ID      string `json:"id"`
+	Nombre  string `json:"nombre"`
+	Detalle string `json:"detalle"`
+	Estado  string `json:"estado"`
 }
 
 type LineaDto struct {
@@ -67,6 +79,7 @@ type CatalogoDto struct {
 	Cocina       CocinaDto        `json:"cocina"`
 	Ingredientes []IngredienteDto `json:"ingredientes"`
 	Recetas      []RecetaDto      `json:"recetas"`
+	Herramientas []HerramientaDto `json:"herramientas"`
 	Categorias   []string         `json:"categorias"`
 	Alergenos    []string         `json:"alergenos"`
 }
@@ -86,6 +99,8 @@ type CreateIngredienteDto struct {
 	UnidadBase string          `json:"unidadBase" binding:"required,oneof=kg L pieza"`
 	MermaPct   float64         `json:"mermaPct" binding:"min=0,max=95"`
 	Origen     string          `json:"mermaOrigen" binding:"omitempty,oneof=referencia manual medido"`
+	Existencia float64         `json:"existencia" binding:"min=0"`
+	Minimo     float64         `json:"minimo" binding:"min=0"`
 	Productos  []ProductoInput `json:"productos" binding:"required,min=1,dive"`
 }
 
@@ -108,6 +123,37 @@ type MedicionInput struct {
 
 type UpdatePrecioDto struct {
 	Precio float64 `json:"precio" binding:"required,gt=0"`
+}
+
+// RegistrarCompraDto — sheet "Registrar compra": N presentaciones del producto
+// activo entran al inventario; si el precio cambió, se actualiza (+historial).
+type RegistrarCompraDto struct {
+	Unidades int     `json:"unidades" binding:"required,min=1"`
+	Precio   float64 `json:"precio" binding:"required,gt=0"`
+}
+
+// ExistenciaDto — ajuste directo de inventario (conteo individual / edición).
+// CaducaAt: "YYYY-MM-DD" para fijar, "" para limpiar, ausente para no tocar.
+type ExistenciaDto struct {
+	Existencia *float64 `json:"existencia" binding:"omitempty,min=0"`
+	Minimo     *float64 `json:"minimo" binding:"omitempty,min=0"`
+	CaducaAt   *string  `json:"caducaAt"`
+}
+
+// ConteoDto — "Contar mi cocina": aplica las existencias contadas en bloque.
+type ConteoDto struct {
+	Items []ConteoItem `json:"items" binding:"required,min=1,dive"`
+}
+
+type ConteoItem struct {
+	IngredienteID string  `json:"ingredienteId" binding:"required,uuid"`
+	Cantidad      float64 `json:"cantidad" binding:"min=0"`
+}
+
+type HerramientaInput struct {
+	Nombre  string `json:"nombre" binding:"required,min=1,max=120"`
+	Detalle string `json:"detalle" binding:"omitempty,max=160"`
+	Estado  string `json:"estado" binding:"omitempty,max=60"`
 }
 
 type UpdateProductoDto struct {

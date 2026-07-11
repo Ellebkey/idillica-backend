@@ -147,6 +147,36 @@ func Nivel(pct *float64, objetivo float64) string {
 	}
 }
 
+// GatherNeeds ≈ gatherNeeds() del prototipo: acumula cuánto se necesita de
+// cada ingrediente para producir una receta UNA vez, expandiendo subrecetas
+// recursivamente (multiplicador = cantidadKg / rendimientoKg de la sub).
+func (c *Catalogo) GatherNeeds(recetaID string) map[string]float64 {
+	acc := map[string]float64{}
+	c.gatherNeeds(recetaID, 1, acc, map[string]bool{})
+	return acc
+}
+
+func (c *Catalogo) gatherNeeds(recetaID string, mult float64, acc map[string]float64, visited map[string]bool) {
+	receta, ok := c.Recetas[recetaID]
+	if !ok || visited[recetaID] {
+		return
+	}
+	visited[recetaID] = true
+	defer delete(visited, recetaID)
+
+	for _, linea := range receta.Lineas {
+		switch {
+		case linea.IngredienteID != nil:
+			acc[*linea.IngredienteID] += linea.Cantidad * mult
+		case linea.SubRecetaID != nil:
+			sub, ok := c.Recetas[*linea.SubRecetaID]
+			if ok && sub.RendimientoKg > 0 {
+				c.gatherNeeds(*linea.SubRecetaID, mult*(linea.Cantidad/sub.RendimientoKg), acc, visited)
+			}
+		}
+	}
+}
+
 // TasaOperacion ≈ opexRate(): Σ gastos mensuales / compras de ingredientes.
 func TasaOperacion(cocina *models.Cocina) float64 {
 	if cocina == nil || cocina.ComprasIngredientesMes <= 0 {

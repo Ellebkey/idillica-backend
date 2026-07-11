@@ -66,10 +66,20 @@ func (s *CatalogoService) Get(ctx context.Context, userID, cocinaID string) (*dt
 		return nil, err
 	}
 
+	var herramientas []models.Herramienta
+	err = s.db.WithContext(ctx).
+		Where("cocina_id = ?", cocinaID).
+		Order("nombre ASC").
+		Find(&herramientas).Error
+	if err != nil {
+		return nil, err
+	}
+
 	catalogo := &dto.CatalogoDto{
 		Cocina:       *toCocinaDto(member.Cocina, member.Rol),
 		Ingredientes: make([]dto.IngredienteDto, 0, len(ingredientes)),
 		Recetas:      make([]dto.RecetaDto, 0, len(recetas)),
+		Herramientas: make([]dto.HerramientaDto, 0, len(herramientas)),
 		Categorias:   seeddata.Categorias,
 		Alergenos:    seeddata.Alergenos,
 	}
@@ -79,7 +89,14 @@ func (s *CatalogoService) Get(ctx context.Context, userID, cocinaID string) (*dt
 	for i := range recetas {
 		catalogo.Recetas = append(catalogo.Recetas, toRecetaDto(&recetas[i]))
 	}
+	for _, h := range herramientas {
+		catalogo.Herramientas = append(catalogo.Herramientas, toHerramientaDto(&h))
+	}
 	return catalogo, nil
+}
+
+func toHerramientaDto(h *models.Herramienta) dto.HerramientaDto {
+	return dto.HerramientaDto{ID: h.ID, Nombre: h.Nombre, Detalle: h.Detalle, Estado: h.Estado}
 }
 
 func toIngredienteDto(ing *models.Ingrediente) dto.IngredienteDto {
@@ -89,6 +106,12 @@ func toIngredienteDto(ing *models.Ingrediente) dto.IngredienteDto {
 		UnidadBase: ing.UnidadBase,
 		Merma:      dto.MermaDto{Pct: ing.MermaPct, Origen: ing.MermaOrigen},
 		Productos:  make([]dto.ProductoDto, 0, len(ing.Productos)),
+		Existencia: ing.Existencia,
+		Minimo:     ing.Minimo,
+	}
+	if ing.CaducaAt != nil {
+		fecha := ing.CaducaAt.Format("2006-01-02")
+		out.CaducaAt = &fecha
 	}
 	for i := range ing.Productos {
 		out.Productos = append(out.Productos, toProductoDto(&ing.Productos[i]))
