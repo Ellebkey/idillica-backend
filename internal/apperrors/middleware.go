@@ -67,14 +67,45 @@ func respond(c *gin.Context, env string, logger *slog.Logger, appErr *AppError) 
 		body.Stack = appErr.Err.Error()
 	}
 
-	logger.Error(appErr.Message,
-		"code", appErr.Code,
-		"status", appErr.StatusCode,
-		"path", c.Request.URL.Path,
-		"method", c.Request.Method,
-	)
+	logResult(c, logger, appErr)
 
 	c.JSON(appErr.StatusCode, gin.H{"error": body})
+}
+
+// logResult registra el error al nivel adecuado para que los errores de
+// cliente dejen de contaminar el stream de errores:
+//   - 5xx (fallo real del servidor)      → error
+//   - ruta inexistente (sonda de uptime) → debug (se descarta en producción)
+//   - resto de 4xx (cliente)             → warn
+//
+// Usa LogAttrs con el context del request para que el Handler de reqid
+// agregue el id de correlación a la línea.
+func logResult(c *gin.Context, logger *slog.Logger, appErr *AppError) {
+	level := levelFor(appErr)
+
+	attrs := []slog.Attr{
+		slog.String("code", appErr.Code),
+		slog.Int("status", appErr.StatusCode),
+		slog.String("path", c.Request.URL.Path),
+		slog.String("method", c.Request.Method),
+	}
+	// El detalle de la causa solo interesa cuando es un fallo real del servidor.
+	if level >= slog.LevelError && appErr.Err != nil {
+		attrs = append(attrs, slog.Any("err", appErr.Err))
+	}
+
+	logger.LogAttrs(c.Request.Context(), level, appErr.Message, attrs...)
+}
+
+func levelFor(appErr *AppError) slog.Level {
+	switch {
+	case appErr.StatusCode >= 500:
+		return slog.LevelError
+	case appErr.Code == "ROUTE_NOT_FOUND":
+		return slog.LevelDebug
+	default:
+		return slog.LevelWarn
+	}
 }
 
 // ErrorHandler escribe la respuesta de error al final de la cadena.

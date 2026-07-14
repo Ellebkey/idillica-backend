@@ -1,5 +1,6 @@
-// logger.go: log de requests HTTP (solo dev/test) — la entrada y, al
-// terminar, status + duración.
+// logger.go: access log — una línea por request al completar (método, ruta,
+// status, duración) a nivel info. El id de correlación lo agrega el
+// reqid.Handler leyéndolo del context del request.
 package middlewares
 
 import (
@@ -12,15 +13,14 @@ import (
 func RequestLogger(logger *slog.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		logger.Debug("request", "method", c.Request.Method, "url", c.Request.URL.String())
 
 		c.Next()
 
-		logger.Debug("response",
-			"method", c.Request.Method,
-			"status", c.Writer.Status(),
-			"url", c.Request.URL.String(),
-			"duration", time.Since(start).String(),
+		logger.LogAttrs(c.Request.Context(), slog.LevelInfo, "request",
+			slog.String("method", c.Request.Method),
+			slog.String("path", c.Request.URL.Path),
+			slog.Int("status", c.Writer.Status()),
+			slog.Duration("duration", time.Since(start)),
 		)
 	}
 }
