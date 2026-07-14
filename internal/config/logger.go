@@ -5,18 +5,24 @@ package config
 import (
 	"log/slog"
 	"os"
+
+	"idilica-backend-go/internal/reqid"
 )
 
 // NewLogger construye el logger de la aplicación.
 func NewLogger(cfg *Config) *slog.Logger {
-	var handler slog.Handler
+	var base slog.Handler
 
 	if cfg.IsProduction() {
-		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+		// Producción: JSON, info y superior. El ruido rutinario (p. ej. las
+		// sondas 404 del monitor de uptime) se emite a nivel debug y por lo
+		// tanto queda descartado aquí.
+		base = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
 	} else {
-		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+		base = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 	}
 
-	// etiqueta fija de la app en cada línea de log
-	return slog.New(handler).With("app", "idilica-api")
+	// reqid.Handler agrega el id de correlación (si el context lo trae) a
+	// cada línea; .With fija la etiqueta de la app.
+	return slog.New(reqid.NewHandler(base)).With("app", "idilica-api")
 }

@@ -16,6 +16,7 @@ import (
 	"idilica-backend-go/internal/config"
 	"idilica-backend-go/internal/controllers"
 	"idilica-backend-go/internal/middlewares"
+	"idilica-backend-go/internal/reqid"
 	"idilica-backend-go/internal/services"
 )
 
@@ -34,18 +35,22 @@ func New(cfg *config.Config, logger *slog.Logger, db *gorm.DB, redisClient *redi
 	// DESPUÉS (más adentro) de gzip — si fuera antes, al abortar un request
 	// (p. ej. token expirado) gzip cierra la respuesta vacía con 200 durante el
 	// unwind y el 401/500 jamás se escribe.
+	// RequestID va primero: fija el id de correlación en el context para que
+	// todo lo posterior (logs de acceso, de error y de recovery) lo lleve.
+	router.Use(middlewares.RequestID())
 	router.Use(middlewares.SecurityHeaders())
 	router.Use(gzip.Gzip(gzip.DefaultCompression))
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{cfg.FrontendURL},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{reqid.HeaderName},
 		AllowCredentials: true,
 	}))
 	router.Use(apperrors.Recovery(cfg.Env, logger))
-	if cfg.IsDevelopment() || cfg.IsTest() {
-		router.Use(middlewares.RequestLogger(logger))
-	}
+	// Access log (info) en todos los entornos: una línea por request con el
+	// id de correlación. Las sondas 404 aparecen aquí a info, no como error.
+	router.Use(middlewares.RequestLogger(logger))
 	router.Use(apperrors.ErrorHandler(cfg.Env, logger))
 
 	// --- Wiring ---
